@@ -72,6 +72,7 @@ setup timestamp,
 progress int,
 primary key(id)
 );
+create index issue_redo0_progress on issue_redo0(progress);
 
 create table transfer_redo0(
 id bigint,
@@ -82,6 +83,7 @@ setup timestamp,
 progress int,
 primary key(id)
 );
+create index transfer_redo0_progress on transfer_redo0(progress);
 
 create table alias_redo0(
 id bigint,
@@ -92,6 +94,7 @@ setup timestamp,
 progress int,
 primary key(id)
 );
+create index alias_redo0_progress on alias_redo0(progress);
 
 create table symbol_redo0(
 id bigint,
@@ -102,6 +105,7 @@ setup timestamp,
 progress int,
 primary key(id)
 );
+create index symbol_redo0_progress on symbol_redo0(progress);
 
 create table note_catalog0(
 id bigint,
@@ -144,6 +148,7 @@ setup timestamp,
 progress int,
 primary key(id)
 );
+create index propose_issue_progress on propose_issue(progress);
 
 create table propose_transfer(
 id bigint,
@@ -155,6 +160,7 @@ setup timestamp,
 progress int,
 primary key(id)
 );
+create index propose_transfer_progress on propose_transfer(progress);
 --
 --drop table player0;
 --create table player0(
