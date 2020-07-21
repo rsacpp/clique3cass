@@ -170,6 +170,15 @@ payload text,
 primary key(id)
 );
 
+create table runtime(
+id int,
+playerrepo text,
+step1repo text,
+load1_threshold decimal,
+primary key(id)
+);
+insert into runtime (id, playerrepo, step1repo, load1_threshold) values(0, '/tmp/var/player', '/tmp/var/step1', 0.7);
+
 --
 --drop table player0;
 --create table player0(
