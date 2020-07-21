@@ -54,7 +54,7 @@ system($cmd);
 $cmd = "perl -p -i.t -e 's/USERID/$userid/mg' payer$userid.py";
 system($cmd);
 # import.py
-system("/usr/bin/python3 import.py $userid $globalId ");
+system("/usr/bin/python3 import2cass.py $userid $globalId ");
 # end of import.py
 $cmd = "rm payer$userid.cpp payer$userid.cpp.t step1$userid.cpp.t step1$userid.cpp payer$userid.py.t jg.key d.key e.key";
 system($cmd);

@@ -97,7 +97,7 @@ class AliasHandler(HandleBase):
                     if res:
                         continue
                     break
-                kafkaproducer = kafkaProducer(bootstrap_servers=kafkaHost.split(','))
+                kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
                 kafkaproducer.send('symbol3', key=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'), value=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'))
                 kafkaproducer.flush()
 

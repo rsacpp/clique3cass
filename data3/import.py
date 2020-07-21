@@ -19,7 +19,7 @@
 
 from kazoo.client import KazooClient
 import hashlib
-import psycopg2
+
 import os
 import sys
 sys.path.append('/the/path/of/util.py')

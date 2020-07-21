@@ -25,7 +25,7 @@ sub convert{
         $ch = substr($str,$i, 1);
         $o = ord($ch);
         $j = 0;
-        for(; $j < 4; $j++){
+        for(; $j < 2; $j++){
             $c =  sprintf("%x",($o>>(4*$j))&0xf);
 	    push @tmp, $c;
         }
@@ -82,7 +82,7 @@ system($cmd);
 $cmd = "perl -p -i.t -e 's/SYMBOL/$symbol/mg' issuer$symbol.py";
 system($cmd);
 
-system("/usr/bin/python3 importissuer.py $userid $symbol $globalId");
+system("/usr/bin/python3 importissuer2cass.py $userid $symbol $globalId");
 
 $cmd = "rm issuer$symbol.cpp issuer$symbol.cpp.t issuer$symbol.py.t jg.key d.key e.key step1$symbol.cpp step1$symbol.cpp.t";
 system($cmd);

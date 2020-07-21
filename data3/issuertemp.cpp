@@ -26,7 +26,7 @@ main(int argc, char* argv[]){
   string* symbol = new string("SYMBOL");
   string* alias = new string("ALIAS");
   
-  if((input->find("e500e500") !=0 )||(input->rfind("42004200") + 8 != input->length())){
+  if((input->find("5e5e") !=0 )||(input->rfind("2424") + 4 != input->length())){
     delete input;
     delete symbol;
     delete alias;
@@ -34,8 +34,8 @@ main(int argc, char* argv[]){
     return 0;
   }
   //manipulate the input
-  input->insert(8, *symbol);
-  input->insert(input->length() - 8 , *alias);
+  input->insert(4, *symbol);
+  input->insert(input->length() - 4 , *alias);
 
   string* key = new string("KEY");
   int pos = key->find("@@");
