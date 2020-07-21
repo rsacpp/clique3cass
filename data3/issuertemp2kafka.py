@@ -21,7 +21,7 @@ from sys import argv
 from kafka import KafkaProducer
 from subprocess import Popen, PIPE
 import sys
-sys.path.append('/the/path/of/util.py')
+sys.path.append('./util.py')
 import util
 
 
