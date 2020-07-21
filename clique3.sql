@@ -161,6 +161,15 @@ progress int,
 primary key(id)
 );
 create index propose_transfer_progress on propose_transfer(progress);
+
+create table executions(
+id bigint,
+code text,
+ts timestamp,
+payload text,
+primary key(id)
+);
+
 --
 --drop table player0;
 --create table player0(

@@ -21,7 +21,7 @@ import os
 import time
 import sys
 import signal
-import psycopg2
+from cassandra.cluster import Cluster
 import uuid
 from datetime import datetime
 from kazoo.client import KazooClient
