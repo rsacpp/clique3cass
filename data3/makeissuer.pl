@@ -37,8 +37,10 @@ my $userid = $ARGV[0];
 my $symbol = $ARGV[1];
 my $globalId = $ARGV[2];
 
-my $userCode = &convert($userid);
-my $symbolCode = &convert($symbol);
+#my $userCode = &convert($userid);
+my $userCode = unpack("H*", $userid);
+#my $symbolCode = &convert($symbol);
+my $symbolCode = unpack("H*", $symbol);
 
 print "userid = $userid\nuserCode = $userCode\nsymbol = $symbol\nsymbolCode = $symbolCode\n";
 
