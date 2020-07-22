@@ -48,5 +48,5 @@ print("output = {0}".format(output))
 
 step0 = output
 kafkaproducer = KafkaProducer(bootstrap_servers='127.0.0.1:9092')
-kafkaproducer.send('issue3', key=bytes('{0}||{1}'.format(globalId, step0.strip()), 'utf-8'), value=bytes('{0}||{1}'.format(globalId, step0.strip()), 'utf-8'))
+kafkaproducer.send('issue3', key=bytes(step0.strip(), 'utf-8'), value=bytes(step0.strip(), 'utf-8'))
 kafkaproducer.flush()
