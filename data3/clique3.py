@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import os
 import time
 import sys
@@ -7,11 +6,14 @@ import signal
 import hashlib
 import configparser
 import binascii
+import logging
 
 from datetime import datetime
+from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
 from kazoo.client import KazooClient
-from kafka import KafkaProducer,KafkaConsumer
+from kafka import KafkaProducer, KafkaConsumer
+
 
 def handle_exit(signum):
     sys.exit(0)
@@ -44,9 +46,15 @@ class HandleBase:
         (load1, load5, load15) = os.getloadavg()
         return load1 > 0.8
 
+    def path(self, txt):
+        m = hashlib.sha256()
+        m.update(txt.encode('utf-8'))
+        dig = m.hexdigest()
+        return '{0}'.format(dig[0])
+
 class AliasHandler(HandleBase):
     def process(self):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         kafka = KafkaConsumer('alias3',
                               group_id='clique3',
                               bootstrap_servers=kafkaHost.split(','))
@@ -63,6 +71,7 @@ class AliasHandler(HandleBase):
             alias, globalId = payload.split('||')
             executionCounter += 1
             executionId = executionCounter.value
+            logging.info('executionId = {0}'.format(executionId))
             stmt = """
             insert into executions(id, code, ts, payload) values(%s, 'alias', toTimestamp(now()), %s)
             """
@@ -104,7 +113,7 @@ class AliasHandler(HandleBase):
 
 class SymbolHandler(HandleBase):
     def process(self):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         kafka = KafkaConsumer('symbol3',
                               group_id='clique3',
                               bootstrap_servers=kafkaHost.split(','))
@@ -129,43 +138,55 @@ class SymbolHandler(HandleBase):
 
 class IssueHandler(HandleBase):
     def process(self):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         kafka = KafkaConsumer('issue3',
                               group_id='clique3',
                               bootstrap_servers=kafkaHost.split(','))
+        executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
+            logging.debug(m)
+            proposal = str(m.value, 'utf-8')
             while self.checkLoad():
-                print('it is too hot, sleep 2 seconds')
+                logging.info('it is too hot, sleep 2 seconds')
                 time.sleep(2)
-            executionCounter = zk.Counter("/executions", default=0x7000)
+            executionCounter += 1
             executionId = executionCounter.value
             stmt = """
             insert into executions(id, code, ts, payload) values(%s, 'issue', toTimestamp(now()), %s)
             """
-            session.execute(stmt, [executionId, payload])
-            proposal = str(m.value, 'utf-8')
-            #pro1 = Popen(['/usr/bin/python3', 'processpropiss.py', proposal], stdin=None, stdout=None)
-            #pro1.wait()
+            session.execute(stmt, [executionId, proposal])
+
             self.processProposal(proposal)
-            
     def processProposal(self, proposal):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         (pq, prop) = proposal.split('@@')
         pq = pq.strip()
         prop = prop.strip()
         stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
         (checksumpq, checksumd) = session.execute(stmt).one()
+        logging.debug('checksumpq = {0}, checksumd = {1}'.format(checksumpq, checksumd))
         pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]], stdin=None, stdout=PIPE)
         checksum0 = pro1.communicate()[0].decode().strip()
         checksum0 = checksum0.rstrip('0')
-        (symbol) = session.execute('select symbol from issuer0 where pq = %s limit 1', [pq]).one()
-        step1path = getpath(symbol)
-        pro3 = Popen(['{0}/step{1}'.format(step1path, symbol), prop, checksum0], stdin=None, stdout=PIPE)
+        logging.debug('checksum0 = {0}'.format(checksum0))
+        row = session.execute('select symbol from issuer0 where pq = %s limit 1', [pq]).one()
+        symbol = row.symbol
+        logging.debug('symbol = {0}, pq = {1}'.format(symbol, pq))
+        #step1path = getpath(symbol)
+        row = session.execute('select step1repo from runtime where id = 0 limit 1').one()
+        step1path = row.step1repo
+        if not step1path:
+            logging.error('step1path can not be None')
+            return
+        step1path = '{0}/{1}'.format(step1path, super().path(symbol))
+        logging.debug('step1path = {0}'.format(step1path))
+        pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol), prop, checksum0], stdin=None, stdout=PIPE)
         verdict = pro3.communicate()[0].decode().strip()
         verdict = verdict.rstrip('0')
-
+        logging.debug('verdict = {0}'.format(verdict))
         pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
         note = pro2.communicate()[0].decode().strip()
+        note = note.rstrip('0')
         print("verdict={0} note={1}".format(verdict, note))
         if not note.startswith('5e5e'):
             print('invalid msg:{0}'.format(note))
@@ -176,15 +197,16 @@ class IssueHandler(HandleBase):
         target = right[:-2]
         (symbol, noteId, quantity) = left.split('||')
         symbol = symbol[2:]
-        res = session.execute('select noteId from ownership0 where note_id = %s limit 1', [noteId]).one()
+        res = session.execute('select note_id from ownership0 where note_id = %s limit 1', [noteId]).one()
         if res:
-            print("the note {0} is already in place".format(noteId))
+            logging.error("the note {0} is already in place".format(noteId))
+            return
         else:
             self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(), symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
         cluster.shutdown()
         
-    def save2ownershipcatalog(pq, verdict, proposal, rawtext, symbol, noteId, quantity, target):
-        cluster, session, kafkaHost, zk = setup()
+    def save2ownershipcatalog(self, pq, verdict, proposal, rawtext, symbol, noteId, quantity, target):
+        cluster, session, kafkaHost, zk = super().setup()
         zkc = zk.Counter("/ownershipId3", default=0x700)
         zkc += 1
         ownershipId = zkc.value
@@ -198,28 +220,32 @@ class IssueHandler(HandleBase):
         sha256 = hashlib.sha256()
         sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
         hashcode = sha256.hexdigest()
-        stmt.execute("""
+        #save 2
+        session.execute("""
         insert into ownership0(id, clique, symbol, note_id, quantity, owner, updated, hash_code)
         values(%s, '3', %s, %s, %s, %s, toTimestamp(now()), %s)
-        """, [int(ownershipId), symbol.strip(), noteId.strip(), quantity.strip(), target.strip(), hashcode.strip()])
-        stmt.execute("""
+        """, [int(ownershipId), symbol.strip(), noteId.strip(), int(quantity.strip()), target.strip(), hashcode.strip()])
+
+        session.execute("""
         insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
-        values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s)
-        """,[int(rowId), pq.strip(), verdict.strip(), prop.strip(), "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity.strip()), target.strip(), '', rawtext.strip(), hashcode.strip()])
+        values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
+        """,[int(rowId), pq.strip(), verdict.strip(), proposal.strip(),
+             "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity.strip()),
+             target.strip(), rawtext.strip(), hashcode.strip()])
         cluster.shutdown()
 
 class TransferHandler(HandleBase):
     def process(self):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         kafka = KafkaConsumer('transfer3',
                               group_id='clique3',
                               bootstrap_servers=kafkaHost.split(','))
+        executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
             while self.checkLoad():
                 print('it is too hot, sleep 2 seconds')
                 time.sleep(2)
             proposal = str(m.value, 'utf-8')
-            executionCounter = zk.Counter("/executions", default=0x7000)
             executionId = executionCounter.value
             stmt = """
             insert into executions(id, code, ts, payload) values(%s, 'transfer', toTimestamp(now()), %s)
@@ -231,7 +257,7 @@ class TransferHandler(HandleBase):
 
 class IssueProposalHandler(HandleBase):
     def process(self):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         kafka = KafkaConsumer('issue0',
                               group_id='clique3',
                               bootstrap_servers=kafkaHost.split(','))
@@ -271,7 +297,7 @@ class IssueProposalHandler(HandleBase):
 
 class TransferProposalHandler(HandleBase):
     def process(self):
-        cluster, session, kafkaHost, zk = setup()
+        cluster, session, kafkaHost, zk = super().setup()
         kafka = KafkaConsumer('transfer0',
                               group_id='clique3',
                               bootstrap_servers=kafkaHost.split(','))
@@ -290,20 +316,21 @@ class TransferProposalHandler(HandleBase):
             pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(util.conf().get('playerepo3'), util.path(alias), alias), rawCode, lastsig, globalId], stdin=None, stdout=None)
             pro3.wait()
 
+
 if __name__ == '__main__':
-    signal.signal(signal.SIGINT, handle_exit)
-    signal.signal(signal.SIGTERM, handle_exit)
-    pid = os.fork()
-    if pid > 0:
-        time.sleep(3)
-        sys.exit(0)
-    os.setsid()
-    sys.stdin.close()
-    freopen('/tmp/testout', 'a', sys.stdout)
-    freopen('/tmp/testerr', 'a', sys.stderr)
-    #alias = AliasHandler()
-    #alias.process()
+    #logging.basicConfig(filename='debug.log', level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
+#@    signal.signal(signal.SIGINT, handle_exit)
+#@    signal.signal(signal.SIGTERM, handle_exit)
+#@    pid = os.fork()
+#@    if pid > 0:
+#@        time.sleep(3)
+#@        sys.exit(0)
+#@    os.setsid()
+#@    sys.stdin.close()
+#@    freopen('/tmp/testout', 'a', sys.stdout)
+#@    freopen('/tmp/testerr', 'a', sys.stderr)
+#    alias = AliasHandler()
+#    alias.process()
     a = IssueHandler()
     a.process()
-
-        
