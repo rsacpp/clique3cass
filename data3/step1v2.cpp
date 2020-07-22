@@ -26,7 +26,7 @@ main(int argc, char* argv[]){
   string* v  = new string(argv[1]);
   /*checksum part*/
   string* checksum = new string(argv[2]);
-  string* pq2 = new string("");
+  string* pq2 = new string("55251ebd654d6e0f308291d2367f9177bba9f463c6163518db0ea2e2bf8c14e9");
   string* d2 = new string("10001");
   bn40* checksum_v  = fromhex(checksum);
   bn40* pq2_v = fromhex(pq2);
