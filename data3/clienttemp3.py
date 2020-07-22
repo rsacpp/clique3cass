@@ -45,7 +45,7 @@ s1 = "{0}{1}{2}".format("^^", raw, "$$")
 #        disp += "{0:x}".format(v0)
 disp = str(binascii.b2a_hex(bytes(s1, 'utf-8')), 'utf-8')
 
-folder = '{0}/{1}'.format(util.conf().get('playerepo3'), util.path('USERID'))
+folder = '{0}/{1}'.format('/tmp/var/player/', util.path('USERID'))
 print('folder = {0}'.format(folder))
 pro1 = Popen(['./payerUSERID', disp], stdin=None, stdout=PIPE, cwd=folder)
 output = pro1.communicate()[0].decode().strip()

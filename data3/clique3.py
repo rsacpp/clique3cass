@@ -6,6 +6,7 @@ import sys
 import signal
 import hashlib
 import configparser
+import binascii
 
 from datetime import datetime
 from cassandra.cluster import Cluster
@@ -143,8 +144,69 @@ class IssueHandler(HandleBase):
             """
             session.execute(stmt, [executionId, payload])
             proposal = str(m.value, 'utf-8')
-            pro1 = Popen(['/usr/bin/python3', 'processpropiss.py', proposal], stdin=None, stdout=None)
-            pro1.wait()
+            #pro1 = Popen(['/usr/bin/python3', 'processpropiss.py', proposal], stdin=None, stdout=None)
+            #pro1.wait()
+            self.processProposal(proposal)
+            
+    def processProposal(self, proposal):
+        cluster, session, kafkaHost, zk = setup()
+        (pq, prop) = proposal.split('@@')
+        pq = pq.strip()
+        prop = prop.strip()
+        stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
+        (checksumpq, checksumd) = session.execute(stmt).one()
+        pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]], stdin=None, stdout=PIPE)
+        checksum0 = pro1.communicate()[0].decode().strip()
+        checksum0 = checksum0.rstrip('0')
+        (symbol) = session.execute('select symbol from issuer0 where pq = %s limit 1', [pq]).one()
+        step1path = getpath(symbol)
+        pro3 = Popen(['{0}/step{1}'.format(step1path, symbol), prop, checksum0], stdin=None, stdout=PIPE)
+        verdict = pro3.communicate()[0].decode().strip()
+        verdict = verdict.rstrip('0')
+
+        pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
+        note = pro2.communicate()[0].decode().strip()
+        print("verdict={0} note={1}".format(verdict, note))
+        if not note.startswith('5e5e'):
+            print('invalid msg:{0}'.format(note))
+            return
+        else:
+            rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
+        (left, right) = rawtext.split('->')
+        target = right[:-2]
+        (symbol, noteId, quantity) = left.split('||')
+        symbol = symbol[2:]
+        res = session.execute('select noteId from ownership0 where note_id = %s limit 1', [noteId]).one()
+        if res:
+            print("the note {0} is already in place".format(noteId))
+        else:
+            self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(), symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
+        cluster.shutdown()
+        
+    def save2ownershipcatalog(pq, verdict, proposal, rawtext, symbol, noteId, quantity, target):
+        cluster, session, kafkaHost, zk = setup()
+        zkc = zk.Counter("/ownershipId3", default=0x700)
+        zkc += 1
+        ownershipId = zkc.value
+        print("ownershipId={0}".format(ownershipId))
+        zkc = zk.Counter("/noteId3", default=0x700)
+        zkc += 1
+        rowId = zkc.value
+        print("rowId={0}".format(rowId))
+        zk.stop()
+        zk.close()
+        sha256 = hashlib.sha256()
+        sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
+        hashcode = sha256.hexdigest()
+        stmt.execute("""
+        insert into ownership0(id, clique, symbol, note_id, quantity, owner, updated, hash_code)
+        values(%s, '3', %s, %s, %s, %s, toTimestamp(now()), %s)
+        """, [int(ownershipId), symbol.strip(), noteId.strip(), quantity.strip(), target.strip(), hashcode.strip()])
+        stmt.execute("""
+        insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
+        values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s)
+        """,[int(rowId), pq.strip(), verdict.strip(), prop.strip(), "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity.strip()), target.strip(), '', rawtext.strip(), hashcode.strip()])
+        cluster.shutdown()
 
 class TransferHandler(HandleBase):
     def process(self):
@@ -237,9 +299,11 @@ if __name__ == '__main__':
         sys.exit(0)
     os.setsid()
     sys.stdin.close()
-    freopen('/tmp/aliasredo3out', 'a', sys.stdout)
-    freopen('/tmp/aliasredo3err', 'a', sys.stderr)
-    alias = AliasHandler()
-    alias.process()
+    freopen('/tmp/testout', 'a', sys.stdout)
+    freopen('/tmp/testerr', 'a', sys.stderr)
+    #alias = AliasHandler()
+    #alias.process()
+    a = IssueHandler()
+    a.process()
 
         

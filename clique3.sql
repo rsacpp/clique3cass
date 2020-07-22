@@ -175,9 +175,16 @@ id int,
 playerrepo text,
 step1repo text,
 load1_threshold decimal,
+checksumpq text,
+checksumd text,
+checksume text,
 primary key(id)
 );
+alter table runtime add checksumpq  text;
+alter table runtime add checksumd  text;
+alter table runtime add checksume  text;
 insert into runtime (id, playerrepo, step1repo, load1_threshold) values(0, '/tmp/var/player', '/tmp/var/step1', 0.7);
+update runtime set checksumd = 'd9ae0dd8d040491a0982c8776666c63e8c8acc3638e5a843592d200f073a1c46' , checksumpq  = '55251ebd654d6e0f308291d2367f9177bba9f463c6163518db0ea2e2bf8c14e9', checksume = '10001' where id= 0;
 
 --
 --drop table player0;
