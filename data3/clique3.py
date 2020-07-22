@@ -223,7 +223,7 @@ class IssueHandler(HandleBase):
         hashcode = sha256.hexdigest()
         #save into 2 tables ownership0& note_catalog0;
         session.execute("""
-        insert into ownership0(id, clique, symbol, note_id, quantity, owner, updated, hash_code)
+        insert into ownership0(seq, clique, symbol, note_id, quantity, owner, updated, hash_code)
         values(%s, '3', %s, %s, %s, %s, toTimestamp(now()), %s)
         """, [int(ownershipId), symbol.strip(), noteId.strip(),
               int(quantity.strip()), target.strip(), hashcode.strip()])
@@ -256,7 +256,6 @@ class TransferHandler(HandleBase):
             """
             session.execute(stmt, [executionId, proposal])
             self.processProposal(proposal)
-            cluster.shutdown()
 
     def processProposal(self, proposal):
         cluster, session, kafkaHost, zk = super().setup()
@@ -269,13 +268,20 @@ class TransferHandler(HandleBase):
                      stdin=None, stdout=PIPE)
         checksum0 = pro1.communicate()[0].decode().strip()
         checksum0 = checksum0.rstrip('0')
-        [alias] = session.execute("""select alias from player0 where pq = %s""",
-                                  [pq]).one()
+        [alias] = session.execute("""
+        select alias from player0 where pq = %s
+        """, [pq]).one()
         alias = alias.strip()
         if not alias:
             logging.error('alias can not be None')
             return
-        step1path = super().getpath(alias)
+        [step1path] = session.execute("""
+        select step1repo from runtime where id = 0 limit 1
+        """).one()
+        if not step1path:
+            logging.error('step1path can not be None')
+            return
+        step1path = '{0}/{1}'.format(step1path, super().path(alias))
         pro1 = Popen(['{0}/step1{1}'.format(step1path, alias), prop, checksum0],
                      stdin=None, stdout=PIPE)
         verdict = pro1.communicate()[0].decode().strip()
@@ -284,14 +290,15 @@ class TransferHandler(HandleBase):
         pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
         note = pro2.communicate()[0].decode().strip()
         note = note.strip()
+        note = note.rstrip('0')
         if not note.startswith('5e5e'):
             logging.error('invalid msg: {0}'.format(note))
             return
         rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
         logging.info('rawtext = {0}'.format(rawtext))
         (left, right) = rawtext.split('->')
-        (target, lastsig) = right.split('@@')
-        lastsig = lastsig[:-2]
+        (target, lastsig, lastblock) = right.split('@@')
+        #lastsig = lastsig[:-2]
         (symbol, noteId, quantity) = left.split('||')
         symbol = symbol.split('::')[1]
         logging.info('pq = {0}, symbol= {1}, noteId= {2}, quantity= {3}, lastsig ={4}'.
@@ -309,7 +316,7 @@ class TransferHandler(HandleBase):
         """, [pq]).one()
         [verdict] = session.execute("""
         select verdict from note_catalog0 where note = %s
-        """, ['{0}||{1}||{2}'.format(symbol,note,quantity)]).one()
+        """, ['{0}||{1}||{2}'.format(symbol, noteId, quantity)]).one()
         cluster.shutdown()
         return owner0 == owner1 and verdict[-16:] == lastsig
 
@@ -325,9 +332,8 @@ class TransferHandler(HandleBase):
         sha256 = hashlib.sha256()
         sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
         hashcode = sha256.hexdigest()
-        session.execute("""insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient,
-        hook, stmt, setup, hash_code')
-        values(%s, 3, %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
+        session.execute("""insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
+        values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
         """,[int(rowId), pq, verdict, proposal, "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity), target, lastsig,
              rawtext, hashcode])
         cluster.shutdown()
@@ -410,5 +416,7 @@ if __name__ == '__main__':
 #@    freopen('/tmp/testerr', 'a', sys.stderr)
 #    alias = AliasHandler()
 #    alias.process()
-    a = IssueHandler()
+
+    a = TransferHandler()
+    #a = IssueHandler()
     a.process()
