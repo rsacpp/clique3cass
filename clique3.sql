@@ -37,6 +37,7 @@ setup timestamp,
 hash_code text,
 primary key(id)
 );
+create index player0_pq on player0(pq);
 
 create table issuer0(
 id bigint,
@@ -123,6 +124,7 @@ setup timestamp,
 hash_code text,
 primary key(id)
 );
+create index note_catalog0_note on note_catalog0(note);
 
 create table runstat0(
 id bigint,
