@@ -168,7 +168,6 @@ class IssueHandler(HandleBase):
         prop = prop.strip()
         stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
         (checksumpq, checksumd) = session.execute(stmt).one()
-        logging.info('checksumpq = {0}, checksumd = {1}'.format(checksumpq, checksumd))
         pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]], stdin=None, stdout=PIPE)
         checksum0 = pro1.communicate()[0].decode().strip()
         checksum0 = checksum0.rstrip('0')
@@ -246,17 +245,93 @@ class TransferHandler(HandleBase):
         executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
             while self.checkLoad():
-                print('it is too hot, sleep 2 seconds')
+                logging.info('it is too hot, sleep 2 seconds')
                 time.sleep(2)
             proposal = str(m.value, 'utf-8')
             executionId = executionCounter.value
+            executionId += 1
             stmt = """
-            insert into executions(id, code, ts, payload) values(%s, 'transfer', toTimestamp(now()), %s)
+            insert into executions(id, code, ts, payload)
+            values(%s, 'transfer', toTimestamp(now()), %s)
             """
             session.execute(stmt, [executionId, proposal])
+            #pro1 = Popen(['/usr/bin/python3', './processproptran.py', proposal], stdin=None, stdout=None)
+            #pro1.wait()
+            self.processProposal(proposal)
+            cluster.shutdown()
 
-            pro1 = Popen(['/usr/bin/python3', './processproptran.py', proposal], stdin=None, stdout=None)
-            pro1.wait()
+    def processProposal(self, proposal):
+        cluster, session, kafkaHost, zk = super().setup()
+        (pq, prop) = proposal.split('@@')
+        pq = pq.strip()
+        prop = prop.strip()
+        stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
+        (checksumpq, checksumd) = session.execute(stmt).one()
+        pro1 = Popen(['./step1', checksumpq, checksumd, proposal[-16:]],
+                     stdin=None, stdout=PIPE)
+        checksum0 = pro1.communicate()[0].decode().strip()
+        checksum0 = checksum0.rstrip('0')
+        [alias] = session.execute("""select alias from player0 where pq = %s""",
+                                  [pq]).one()
+        alias = alias.strip()
+        if not alias:
+            logging.error('alias can not be None')
+            return
+        step1path = super().getpath(alias)
+        pro1 = Popen(['{0}/step1{1}'.format(step1path, alias), prop, checksum0],
+                     stdin=None, stdout=PIPE)
+        verdict = pro1.communicate()[0].decode().strip()
+        verdict = verdict.rstrip('0')
+
+        pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
+        note = pro2.communicate()[0].decode().strip()
+        note = note.strip()
+        if not note.startswith('5e5e'):
+            logging.error('invalid msg: {0}'.format(note))
+            return
+        rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
+        logging.info('rawtext = {0}'.format(rawtext))
+        (left, right) = rawtext.split('->')
+        (target, lastsig) = right.split('@@')
+        lastsig = lastsig[:-2]
+        (symbol, noteId, quantity) = left.split('||')
+        symbol = symbol[2:]
+        if self.verify(pq, symbol, noteId, quantity, lastsig):
+            self.save2ownershipcatalog(pq, verdict, prop, rawtext, symbol, noteId, quantity, target, lastsig)
+        cluster.shutdown()
+    def verify(self, pq, symbol, noteId, quantity, lastsig):
+        cluster, session, kafkaHost, zk = super().setup()
+        [owner0] = session.execute("""
+        select owner from ownership0 where note_id = %s
+        """, [noteId]).one()
+        [owner1] = session.execute("""
+        select alias from player0 where pq = %s
+        """, [pq]).one()
+        [verdict] = session.execute("""
+        select verdict from note_catalog0 where note = %s
+        """, ['{0}||{1}||{2}'.format(symbol,note,quantity)]).one()
+        cluster.shutdown()
+        return owner0 == owner1 and verdict[-16:] == lastsig
+
+    def save2ownershipcatalog(self, pq, verdict, proposal, rawtext, symbol, noteId, quantity, target, lastsig):
+        cluster, session, kafkaHost, zk = super().setup()
+        zkc = zk.Counter("/noteId3", default=0x7000)
+        zkc += 1
+        rowId = zkc.value
+        #update the ownership
+        session.execute("""
+        update ownership0 set owner= %s , updated = toTimestamp(now()) where note_id = %s
+        """, [target, noteId])
+        sha256 = hashlib.sha256()
+        sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
+        hashcode = sha256.hexdigest()
+        session.execute("""insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient,
+        hook, stmt, setup, hash_code')
+        values(%s, 3, %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
+        """,[int(rowId), pq, verdict, proposal, "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity), target, lastsig,
+             rawtext, hashcode])
+        cluster.shutdown()
+
 
 class IssueProposalHandler(HandleBase):
     def process(self):
