@@ -21,7 +21,7 @@ import sys
 from kafka import KafkaProducer,KafkaConsumer
 from subprocess import Popen, PIPE
 from sys import argv
-
+import binascii
 sys.path.append('./util.py')
 import util
 
@@ -53,6 +53,6 @@ output = output.rstrip('0')
 
 print("output = {0}".format(output))
 kafkaproducer = KafkaProducer(bootstrap_servers='localhost:9092')
-kafkaproducer.send('transfer3', key=bytes('{0}||{1}'.format(globalId, output), 'utf-8'), key=bytes('{0}||{1}'.format(globalId, output), 'utf-8'))
+kafkaproducer.send('transfer3', key=bytes(output, 'utf-8'), value=bytes(output, 'utf-8'))
 kafkaproducer.flush()
 
