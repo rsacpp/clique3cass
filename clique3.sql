@@ -50,6 +50,7 @@ setup timestamp,
 hash_code text,
 primary key(id)
 );
+create index issuer0_pq on issuer0(pq);
 
 create table ownership0(
 id bigint,
@@ -62,6 +63,7 @@ updated timestamp,
 hash_code text,
 primary key(id)
 );
+create index ownership0_note_id on ownership0(note_id);
 
 create table issue_redo0(
 id bigint,
