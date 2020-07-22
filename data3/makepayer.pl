@@ -26,7 +26,7 @@ open JG, "< jg.key" or die "can't open jg.key\n";
 $txt = join '', <JG> ;
 chomp($txt);
 
-print "txt = $txt\n";
+#print "txt = $txt\n";
 my $cmd = qq{
 cp payertemp.cpp payer$userid.cpp
 };

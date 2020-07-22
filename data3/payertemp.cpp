@@ -23,7 +23,7 @@ using namespace std;
 int
 main(int argc, char* argv[]){
   string* input = new string(argv[1]);
-  if((input->find("e500e500") !=0 )||(input->rfind("42004200") + 8 != input->length())){
+  if((input->find("5e5e") !=0 )||(input->rfind("2424") + 4 != input->length())){
     delete input;
     cout<<"format error"<<endl;
     return 0;
