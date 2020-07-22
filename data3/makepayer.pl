@@ -49,7 +49,7 @@ system($cmd);
 $cmd = qq{g++ bn40.cpp step1$userid.cpp -o step1$userid};
 system($cmd);
 # endof make step1v2
-$cmd =  "cp clienttemp2.py payer$userid.py; chmod 777 payer$userid.py";
+$cmd =  "cp clienttemp3.py payer$userid.py; chmod 777 payer$userid.py";
 system($cmd);
 $cmd = "perl -p -i.t -e 's/USERID/$userid/mg' payer$userid.py";
 system($cmd);

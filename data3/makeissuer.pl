@@ -77,7 +77,7 @@ $cmd = qq{g++ bn40.cpp step1$symbol.cpp -o step1$symbol};
 system($cmd);
 #end of make step1v2
 
-$cmd =  "cp issuertemp2.py issuer$symbol.py; chmod 777 issuer$symbol.py";
+$cmd =  "cp issuertemp2kafka.py issuer$symbol.py; chmod 777 issuer$symbol.py";
 system($cmd);
 $cmd = "perl -p -i.t -e 's/SYMBOL/$symbol/mg' issuer$symbol.py";
 system($cmd);
