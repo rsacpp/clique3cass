@@ -255,8 +255,6 @@ class TransferHandler(HandleBase):
             values(%s, 'transfer', toTimestamp(now()), %s)
             """
             session.execute(stmt, [executionId, proposal])
-            #pro1 = Popen(['/usr/bin/python3', './processproptran.py', proposal], stdin=None, stdout=None)
-            #pro1.wait()
             self.processProposal(proposal)
             cluster.shutdown()
 
@@ -295,7 +293,9 @@ class TransferHandler(HandleBase):
         (target, lastsig) = right.split('@@')
         lastsig = lastsig[:-2]
         (symbol, noteId, quantity) = left.split('||')
-        symbol = symbol[2:]
+        symbol = symbol.split('::')[1]
+        logging.info('pq = {0}, symbol= {1}, noteId= {2}, quantity= {3}, lastsig ={4}'.
+                     format(pq, symbol, noteId, quantity, lastsig))
         if self.verify(pq, symbol, noteId, quantity, lastsig):
             self.save2ownershipcatalog(pq, verdict, prop, rawtext, symbol, noteId, quantity, target, lastsig)
         cluster.shutdown()
