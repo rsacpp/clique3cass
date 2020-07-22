@@ -54,7 +54,7 @@ primary key(id)
 create index issuer0_pq on issuer0(pq);
 
 create table ownership0(
-id bigint,
+seq bigint,
 clique text,
 symbol text,
 note_id text,
@@ -62,9 +62,9 @@ quantity int,
 owner text,
 updated timestamp,
 hash_code text,
-primary key(id)
+primary key(note_id)
 );
-create index ownership0_note_id on ownership0(note_id);
+create index ownership0_seq on ownership0(seq);
 
 create table issue_redo0(
 id bigint,
