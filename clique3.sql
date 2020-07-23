@@ -38,6 +38,7 @@ hash_code text,
 primary key(id)
 );
 create index player0_pq on player0(pq);
+create index player0_global_id on player0(global_id);
 
 create table issuer0(
 id bigint,
@@ -52,6 +53,7 @@ hash_code text,
 primary key(id)
 );
 create index issuer0_pq on issuer0(pq);
+create index issuer0_symbol on issuer0(symbol);
 
 create table ownership0(
 seq bigint,
@@ -138,9 +140,9 @@ primary key(id)
 );
 
 create table reserved0(
-id bigint,
+seq bigint,
 word text,
-primary key(id)
+primary key(word)
 );
 
 create table propose_issue(
