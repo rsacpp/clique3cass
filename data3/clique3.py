@@ -344,34 +344,33 @@ class TransferProposalHandler(HandleBase):
         cluster.shutdown()
 
 if __name__ == '__main__':
-    #logging.basicConfig(filename='debug.log', level=logging.DEBUG)
-    logging.basicConfig(level=logging.INFO)
-#@    signal.signal(signal.SIGINT, handle_exit)
-#@    signal.signal(signal.SIGTERM, handle_exit)
-#@    pid = os.fork()
-#@    if pid > 0:
-#@        time.sleep(3)
-#@        sys.exit(0)
-#@    os.setsid()
-#@    sys.stdin.close()
-#@    freopen('/tmp/testout', 'a', sys.stdout)
-#@    freopen('/tmp/testerr', 'a', sys.stderr)
-#    alias = AliasHandler()
-#    alias.process()
-
-    #a = TransferHandler()
-    #a = IssueHandler()
+    signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+    pid = os.fork()
+    if pid > 0:
+        time.sleep(3)
+        sys.exit(0)
+    os.setsid()
+    sys.stdin.close()
+    freopen('/tmp/testout', 'a', sys.stdout)
+    freopen('/tmp/testerr', 'a', sys.stderr)
     instance = argv[1]
     if instance == 'issue0':
-        a = IssueProposalHandler()
+        logging.basicConfig(filename='issue0.log', level=logging.INFO)
+        var = IssueProposalHandler()
     if instance == 'issue3':
-        a = IssueHandler()
+        logging.basicConfig(filename='issue3.log', level=logging.INFO)
+        var = IssueHandler()
     if instance == 'transfer0':
-        a = TransferProposalHandler()
+        logging.basicConfig(filename='transfer0.log', level=logging.INFO)
+        var = TransferProposalHandler()
     if instance == 'transfer3':
-        a = TransferHandler()
+        logging.basicConfig(filename='transfer3.log', level=logging.INFO)
+        var = TransferHandler()
     if instance == 'symbol3':
-        a = SymbolHandler()
+        logging.basicConfig(filename='symbol3.log', level=logging.INFO)
+        var = SymbolHandler()
     if instance == 'alias3':
-        a = AliasHandler()
-    a.process()
+        logging.basicConfig(filename='alias3.log', level=logging.INFO)
+        var = AliasHandler()
+    var.process()
