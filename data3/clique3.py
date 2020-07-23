@@ -63,8 +63,6 @@ class HandleBase:
             """
             session.execute(stmt, [executionId, queueName, proposal])
             self.processProposal(proposal)
-            zk.stop()
-            zk.close()
 
     def processProposal(self, proposal):
         pass
