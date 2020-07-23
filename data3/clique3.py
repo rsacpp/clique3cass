@@ -7,13 +7,14 @@ import hashlib
 import configparser
 import binascii
 import logging
+import random
 
 from datetime import datetime
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
 from kazoo.client import KazooClient
 from kafka import KafkaProducer, KafkaConsumer
-
+from sys import argv
 
 def handle_exit(signum):
     sys.exit(0)
@@ -110,6 +111,7 @@ class AliasHandler(HandleBase):
                            value=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'))
         kafkaproducer.flush()
         cluster.shutdown()
+        time.sleep(2)
 
 class SymbolHandler(HandleBase):
     def queueName(self):
@@ -127,6 +129,7 @@ class SymbolHandler(HandleBase):
         pro0.wait()
         pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias, symbol, globalId], stdin=None, stdout=None, cwd='.')
         pro1.wait()
+        time.sleep(2)
 
 
 class IssueHandler(HandleBase):
@@ -295,66 +298,50 @@ class TransferHandler(HandleBase):
 
 
 class IssueProposalHandler(HandleBase):
-    def process(self):
+    def queueName(self):
+        return 'issue0'
+
+    def processProposal(self, payload):
         cluster, session, kafkaHost, zk = super().setup()
-        kafka = KafkaConsumer('issue0',
-                              group_id='clique3',
-                              bootstrap_servers=kafkaHost.split(','))
-        for m in kafka:
-            while self.checkLoad():
-                print('it is too hot, sleep 2 seconds')
-                time.sleep(2)
-            payload = str(m.value, 'utf-8')
-            executionCounter = zk.Counter("/executions", default=0x7000)
-            executionId = executionCounter.value
-            stmt = """
-            insert into executions(id, code, ts, payload) values(%s, 'issue0', toTimestamp(now()), %s)
-            """
-            session.execute(stmt, [executionId, payload])
-            (symbol, quantity, globalId) = payload.split('||')
-            # first get the id of the note, take a random number
-            sha256 = hashlib.sha256()
+        (symbol, quantity, globalId) = payload.split('||')
+        sha256 = hashlib.sha256()
+        while True:
             sha256.update("{0}".format(symbol).encode('utf-8'))
             sha256.update("{0}".format(random.random()).encode('utf-8'))
             sha256.update("{0}".format(quantity).encode('utf-8'))
             digest = sha256.hexdigest()
             length = len(digest)
             noteId = digest[length-8:]
-            while True:
-                res = session.execute('select * from ownership0 where note_id = %s', [noteId])
-                if res:
-                    sha256.update("{0}".format(random.random()).encode('utf-8'))
-                    digest = sha256.hexdigest()
-                    length = len(digest)
-                    noteId = digest[length-8:]
-                else:
-                    break
-            text = "||{0}||{1}->".format(noteId, quantity)
+            res = session.execute("""
+            select * from ownership0 where note_id = %s
+            """, [noteId])
+            if not res:
+                break
+        stmt = """
+        select playerrepo from runtime where id=0
+        """
+        [folder] = session.execute(stmt).one()
+        text = "||{0}||{1}->".format(noteId, quantity)
+        pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/issuer{2}.py'.format(folder, super().path(symbol), symbol), text, globalId], stdin=None, stdout=None)
+        pro3.wait()
+        cluster.shutdown()
 
-            pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/issuer{2}.py'.format(util.conf().get('playerepo3'), util.path(symbol), symbol), text, globalId], stdin=None, stdout=None)
-            pro3.wait()
 
 class TransferProposalHandler(HandleBase):
-    def process(self):
-        cluster, session, kafkaHost, zk = super().setup()
-        kafka = KafkaConsumer('transfer0',
-                              group_id='clique3',
-                              bootstrap_servers=kafkaHost.split(','))
-        for m in kafka:
-            while self.checkLoad():
-                print('it is too hot, sleep 2 seconds')
-                time.sleep(2)
-            payload = str(m.value, 'utf-8')
-            executionCounter = zk.Counter("/executions", default=0x7000)
-            executionId = executionCounter.value
-            stmt = """
-            insert into executions(id, code, ts, payload) values(%s, 'issue0', toTimestamp(now()), %s)
-            """
-            session.execute(stmt, [executionId, payload])
-            (alias, raw_code, last_txn, last_block, global_id) = payload.split('&&')
-            pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(util.conf().get('playerepo3'), util.path(alias), alias), rawCode, lastsig, globalId], stdin=None, stdout=None)
-            pro3.wait()
+    def queueName(self):
+        return 'transfer0'
 
+    def processProposal(self, payload):
+        cluster, session, kafkaHost, zk = super().setup()
+        stmt = """
+        select playerrepo from runtime where id=0
+        """
+        [folder] = session.execute(stmt).one()
+        (alias, rawCode, lastTxn, lastBlock, globalId)=payload.split('&&')
+        logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
+        pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(folder, super().path(alias), alias), rawCode, lastTxn, globalId, lastBlock], stdin=None, stdout=None)
+        pro3.wait()
+        cluster.shutdown()
 
 if __name__ == '__main__':
     #logging.basicConfig(filename='debug.log', level=logging.DEBUG)
@@ -374,10 +361,17 @@ if __name__ == '__main__':
 
     #a = TransferHandler()
     #a = IssueHandler()
-    pid = os.fork()
-    if pid > 0:
-        time.sleep(1)
-        a = AliasHandler()
-    else:
+    instance = argv[1]
+    if instance == 'issue0':
+        a = IssueProposalHandler()
+    if instance == 'issue3':
+        a = IssueHandler()
+    if instance == 'transfer0':
+        a = TransferProposalHandler()
+    if instance == 'transfer3':
+        a = TransferHandler()
+    if instance == 'symbol3':
         a = SymbolHandler()
+    if instance == 'alias3':
+        a = AliasHandler()
     a.process()
