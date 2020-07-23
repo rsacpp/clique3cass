@@ -39,7 +39,32 @@ class HandleBase:
         zk.start()
         return cluster, session, kafkaHost, zk
 
+    def queueName(self):
+        pass
+
     def process(self):
+        cluster, session, kafkaHost, zk = self.setup()
+        queueName = self.queueName()
+        logging.info('queue Name: {0}'.format(queueName))
+        kafka = KafkaConsumer(queueName,
+                              group_id='clique3',
+                              bootstrap_servers=kafkaHost.split(','))
+        executionCounter = zk.Counter("/executions", default=0x7000)
+        for m in kafka:
+            while self.checkLoad():
+                logging.info('it is too hot, sleep 2 seconds')
+                time.sleep(2)
+            proposal = str(m.value, 'utf-8')
+            executionId = executionCounter.value
+            executionId += 1
+            stmt = """
+            insert into executions(id, code, ts, payload)
+            values(%s, %s, toTimestamp(now()), %s)
+            """
+            session.execute(stmt, [executionId, queueName, proposal])
+            self.processProposal(proposal)
+
+    def processProposal(self, proposal):
         pass
 
     def checkLoad(self):
@@ -140,26 +165,8 @@ class SymbolHandler(HandleBase):
             pro1.wait()
 
 class IssueHandler(HandleBase):
-    def process(self):
-        cluster, session, kafkaHost, zk = super().setup()
-        kafka = KafkaConsumer('issue3',
-                              group_id='clique3',
-                              bootstrap_servers=kafkaHost.split(','))
-        executionCounter = zk.Counter("/executions", default=0x7000)
-        for m in kafka:
-            logging.debug(m)
-            proposal = str(m.value, 'utf-8')
-            while self.checkLoad():
-                logging.info('it is too hot, sleep 2 seconds')
-                time.sleep(2)
-            executionCounter += 1
-            executionId = executionCounter.value
-            stmt = """
-            insert into executions(id, code, ts, payload)
-            values(%s, 'issue', toTimestamp(now()), %s)
-            """
-            session.execute(stmt, [executionId, proposal])
-            self.processProposal(proposal)
+    def queueName(self):
+        return 'issue3'
 
     def processProposal(self, proposal):
         cluster, session, kafkaHost, zk = super().setup()
@@ -237,25 +244,8 @@ class IssueHandler(HandleBase):
         cluster.shutdown()
 
 class TransferHandler(HandleBase):
-    def process(self):
-        cluster, session, kafkaHost, zk = super().setup()
-        kafka = KafkaConsumer('transfer3',
-                              group_id='clique3',
-                              bootstrap_servers=kafkaHost.split(','))
-        executionCounter = zk.Counter("/executions", default=0x7000)
-        for m in kafka:
-            while self.checkLoad():
-                logging.info('it is too hot, sleep 2 seconds')
-                time.sleep(2)
-            proposal = str(m.value, 'utf-8')
-            executionId = executionCounter.value
-            executionId += 1
-            stmt = """
-            insert into executions(id, code, ts, payload)
-            values(%s, 'transfer', toTimestamp(now()), %s)
-            """
-            session.execute(stmt, [executionId, proposal])
-            self.processProposal(proposal)
+    def queueName(self):
+        return 'transfer3'
 
     def processProposal(self, proposal):
         cluster, session, kafkaHost, zk = super().setup()
