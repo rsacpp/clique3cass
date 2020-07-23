@@ -9,15 +9,16 @@ import binascii
 import logging
 import random
 
-from datetime import datetime
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
 from kazoo.client import KazooClient
 from kafka import KafkaProducer, KafkaConsumer
 from sys import argv
 
+
 def handle_exit(signum):
     sys.exit(0)
+
 
 def freopen(f, mode, stream):
     oldf = open(f, mode)
@@ -25,6 +26,7 @@ def freopen(f, mode, stream):
     newfd = stream.fileno()
     os.close(newfd)
     os.dup2(oldfd, newfd)
+
 
 class HandleBase:
     def setup(self):
@@ -78,6 +80,7 @@ class HandleBase:
         dig = m.hexdigest()
         return '{0}'.format(dig[0])
 
+
 class AliasHandler(HandleBase):
     def queueName(self):
         return 'alias3'
@@ -90,7 +93,7 @@ class AliasHandler(HandleBase):
         pro0.wait()
         pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId], stdin=None, stdout=None, cwd='.')
         pro1.wait()
-        #put a symbol message to kafka
+        # put a symbol message to kafka
         sha256 = hashlib.sha256()
         while True:
             sha256.update('{0}'.format(globalId).encode('utf-8'))
@@ -104,7 +107,7 @@ class AliasHandler(HandleBase):
             res = session.execute('select word from reserved0 where word = %s', [symbol]).one()
             if res:
                 continue
-            #end the loop
+            # end the loop
             break
         kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
         kafkaproducer.send('symbol3', key=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'),
@@ -112,6 +115,7 @@ class AliasHandler(HandleBase):
         kafkaproducer.flush()
         cluster.shutdown()
         time.sleep(2)
+
 
 class SymbolHandler(HandleBase):
     def queueName(self):
@@ -180,7 +184,7 @@ class IssueHandler(HandleBase):
             self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(),
                                        symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
         cluster.shutdown()
-        
+
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext, symbol, noteId, quantity, target):
         cluster, session, kafkaHost, zk = super().setup()
         zkc = zk.Counter("/ownershipId3", default=0x700)
@@ -196,7 +200,7 @@ class IssueHandler(HandleBase):
         sha256 = hashlib.sha256()
         sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
         hashcode = sha256.hexdigest()
-        #save into 2 tables ownership0& note_catalog0;
+        # save into 2 tables ownership0& note_catalog0
         session.execute("""
         insert into ownership0(seq, clique, symbol, note_id, quantity, owner, updated, hash_code)
         values(%s, '3', %s, %s, %s, %s, toTimestamp(now()), %s)
@@ -206,10 +210,9 @@ class IssueHandler(HandleBase):
         session.execute("""
         insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
         values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
-        """,[int(rowId), pq.strip(), verdict.strip(), proposal.strip(),
-             "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity.strip()),
-             target.strip(), rawtext.strip(), hashcode.strip()])
+        """, [int(rowId), pq.strip(), verdict.strip(), proposal.strip(), "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity.strip()), target.strip(), rawtext.strip(), hashcode.strip()])
         cluster.shutdown()
+
 
 class TransferHandler(HandleBase):
     def queueName(self):
@@ -256,7 +259,7 @@ class TransferHandler(HandleBase):
         logging.info('rawtext = {0}'.format(rawtext))
         (left, right) = rawtext.split('->')
         (target, lastsig, lastblock) = right.split('@@')
-        #lastsig = lastsig[:-2]
+        # lastsig = lastsig[:-2]
         (symbol, noteId, quantity) = left.split('||')
         symbol = symbol.split('::')[1]
         logging.info('pq = {0}, symbol= {1}, noteId= {2}, quantity= {3}, lastsig ={4}'.
@@ -264,6 +267,7 @@ class TransferHandler(HandleBase):
         if self.verify(pq, symbol, noteId, quantity, lastsig):
             self.save2ownershipcatalog(pq, verdict, prop, rawtext, symbol, noteId, quantity, target, lastsig)
         cluster.shutdown()
+
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
         [owner0] = session.execute("""
@@ -283,7 +287,6 @@ class TransferHandler(HandleBase):
         zkc = zk.Counter("/noteId3", default=0x7000)
         zkc += 1
         rowId = zkc.value
-        #update the ownership
         session.execute("""
         update ownership0 set owner= %s , updated = toTimestamp(now()) where note_id = %s
         """, [target, noteId])
@@ -292,8 +295,7 @@ class TransferHandler(HandleBase):
         hashcode = sha256.hexdigest()
         session.execute("""insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
         values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
-        """,[int(rowId), pq, verdict, proposal, "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity), target, lastsig,
-             rawtext, hashcode])
+        """, [int(rowId), pq, verdict, proposal, "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity), target, lastsig, rawtext, hashcode])
         cluster.shutdown()
 
 
@@ -337,11 +339,13 @@ class TransferProposalHandler(HandleBase):
         select playerrepo from runtime where id=0
         """
         [folder] = session.execute(stmt).one()
-        (alias, rawCode, lastTxn, lastBlock, globalId)=payload.split('&&')
+        (alias, rawCode, lastTxn, lastBlock, globalId) = payload.split('&&')
         logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
-        pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(folder, super().path(alias), alias), rawCode, lastTxn, globalId, lastBlock], stdin=None, stdout=None)
+        pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(folder, super().path(alias), alias), rawCode, lastTxn, globalId, lastBlock],
+                     stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
+
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handle_exit)
