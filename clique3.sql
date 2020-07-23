@@ -68,50 +68,6 @@ primary key(note_id)
 );
 create index ownership0_seq on ownership0(seq);
 
-create table issue_redo0(
-id bigint,
-clique text,
-global_id text,
-proposal text,
-setup timestamp,
-progress int,
-primary key(id)
-);
-create index issue_redo0_progress on issue_redo0(progress);
-
-create table transfer_redo0(
-id bigint,
-clique text,
-global_id text,
-alias text,
-setup timestamp,
-progress int,
-primary key(id)
-);
-create index transfer_redo0_progress on transfer_redo0(progress);
-
-create table alias_redo0(
-id bigint,
-clique text,
-global_id text,
-alias text,
-setup timestamp,
-progress int,
-primary key(id)
-);
-create index alias_redo0_progress on alias_redo0(progress);
-
-create table symbol_redo0(
-id bigint,
-clique text,
-global_id text,
-symbol text,
-setup timestamp,
-progress int,
-primary key(id)
-);
-create index symbol_redo0_progress on symbol_redo0(progress);
-
 create table note_catalog0(
 id bigint,
 clique text,
@@ -128,45 +84,12 @@ primary key(id)
 );
 create index note_catalog0_note on note_catalog0(note);
 
-create table runstat0(
-id bigint,
-executable text,
-ints timestamp,
-inload decimal,
-outts timestamp,
-outload decimal,
-nodename text,
-primary key(id)
-);
 
 create table reserved0(
 seq bigint,
 word text,
 primary key(word)
 );
-
-create table propose_issue(
-id bigint,
-global_id text,
-symbol text,
-quantity int,
-setup timestamp,
-progress int,
-primary key(id)
-);
-create index propose_issue_progress on propose_issue(progress);
-
-create table propose_transfer(
-id bigint,
-global_id text,
-alias text,
-raw_code text,
-lastsig3 text,
-setup timestamp,
-progress int,
-primary key(id)
-);
-create index propose_transfer_progress on propose_transfer(progress);
 
 create table executions(
 id bigint,
@@ -186,160 +109,6 @@ checksumd text,
 checksume text,
 primary key(id)
 );
-alter table runtime add checksumpq  text;
-alter table runtime add checksumd  text;
-alter table runtime add checksume  text;
 insert into runtime (id, playerrepo, step1repo, load1_threshold) values(0, '/tmp/var/player', '/tmp/var/step1', 0.7);
 update runtime set checksumd = 'd9ae0dd8d040491a0982c8776666c63e8c8acc3638e5a843592d200f073a1c46' , checksumpq  = '55251ebd654d6e0f308291d2367f9177bba9f463c6163518db0ea2e2bf8c14e9', checksume = '10001' where id= 0;
 
---
---drop table player0;
---create table player0(
---id bigint,
---clique text,
---"globalId" text,
---pq text,
---d text,
---alias text,
---setup timestamp,
---"hashCode" text --hashCode over id
---);
---
---
---drop table issuer0;
---create table issuer0(
---id bigint,
---clique text,
---"globalId" text,
---pq text,
---d text,
---alias text,
---symbol text,
---setup timestamp,
---"hashCode" text --hashCode over id
---);
---
---
---drop table ownership0;
---create table ownership0(
---id bigint,
---clique text,
---symbol text,
---"noteId" text,
---quantity int,
---owner text,
---updated timestamp,
---"hashCode" text --hashcode over id 
---);
---
---
---drop table issue_redo0;
---create table issue_redo0(
---id serial,
---clique text,
---"globalId" text,
---proposal text,
---setup timestamp,
---progress int
---);
---
---
---drop table transfer_redo0;
---create table transfer_redo0(
---id serial,
---clique text,
---"globalId" text,
---proposal text,
---setup timestamp,
---progress int
---);
---
---
---drop table alias_redo0;
---create table alias_redo0(
---id serial,
---clique text,
---"globalId" text,
---alias text,
---setup timestamp,
---progress int
---);
---
---drop table symbol_redo0;
---create table symbol_redo0(
---id serial,
---clique text,
---"globalId" text,
---symbol text,
---setup timestamp,
---progress int
---);
---
---drop table note_catalog0;
---create table note_catalog0(
---id bigint,
---clique text,
---pq text,
---verdict text,
---proposal text,
---note text,
---recipient text,
---hook text,
---stmt text,
---setup timestamp,
---"hashCode" text 
---);
---
---drop table runstat0;
---create table runstat0(
---id serial,
---executable text,
---ints timestamp,
---inload decimal,
---outts timestamp,
---outload decimal,
---nodename text
---);
---
---
---drop table con0;
---create table con0(
---id serial,
---param text,
---val text
---);
---
---drop table params0;
---create table params0(
---id serial,
---clique text,
---pq text,
---d text
---);
---
---drop table reserved0;
---create table reserved0(
---id serial,
---word text
---);
---
---drop table propose_issue;
---create table propose_issue(
---id serial,
---"globalId" text,
---symbol text,
---quantity int,
---setup timestamp,
---progress int
---);
---
---drop table propose_transfer;
---create table propose_transfer(
---id serial,
---"globalId" text,
---alias text,
---"rawCode" text,
---lastsig3 text,
---setup timestamp,
---progress int
---);
