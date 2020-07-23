@@ -55,14 +55,16 @@ class HandleBase:
                 logging.info('it is too hot, sleep 2 seconds')
                 time.sleep(2)
             proposal = str(m.value, 'utf-8')
+            executionCounter += 1
             executionId = executionCounter.value
-            executionId += 1
             stmt = """
             insert into executions(id, code, ts, payload)
             values(%s, %s, toTimestamp(now()), %s)
             """
             session.execute(stmt, [executionId, queueName, proposal])
             self.processProposal(proposal)
+            zk.stop()
+            zk.close()
 
     def processProposal(self, proposal):
         pass
@@ -78,91 +80,56 @@ class HandleBase:
         return '{0}'.format(dig[0])
 
 class AliasHandler(HandleBase):
-    def process(self):
+    def queueName(self):
+        return 'alias3'
+
+    def processProposal(self, proposal):
+        (alias, globalId) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        kafka = KafkaConsumer('alias3',
-                              group_id='clique3',
-                              bootstrap_servers=kafkaHost.split(','))
-
-        executionCounter = zk.Counter("/executions", default=0x7000)
-
-        for m in kafka:
-            while self.checkLoad():
-                print('it is too hot, sleep 2 seconds')
-                time.sleep(2)
-
-            payload = str(m.value, 'utf-8')
-            #save it to cass
-            alias, globalId = payload.split('||')
-            executionCounter += 1
-            executionId = executionCounter.value
-            logging.info('executionId = {0}'.format(executionId))
-            stmt = """
-            insert into executions(id, code, ts, payload)
-            values(%s, 'alias', toTimestamp(now()), %s)
-            """
-            session.execute(stmt, [executionId, payload])
-
-            with lock0:
-                # the operation
-                pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd='/var/tmp')
-                pro0.wait()
-                pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId], stdin=None, stdout=None, cwd='/var/tmp')
-                pro1.wait()
-                #put a symbol message to kafka
-                sha256 = hashlib.sha256()
-                while True:
-                    sha256.update('{0}'.format(globalId).encode('utf-8'))
-                    sha256.update('{0}'.format(alias).encode('utf-8'))
-                    hashCode = sha256.hexdigest()
-                    symbol = hashCode[:5]
-                    symbol = symbol.upper()
-                    res = session.execute("""
-                    select symbol from symbol_redo0 where symbol = %s
-                    """, [symbol])
-                    if res:
-                        continue
-                    res = session.execute("""
-                    select symbol from issuer0 where symbol = %s
-                    """, [symbol])
-                    if res:
-                        continue
-                    res = session.execute("""
-                    select word from reserved0 where word = %s
-                    """, [symbol])
-                    if res:
-                        continue
-                    break
-                kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
-                kafkaproducer.send('symbol3', key=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'), value=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'))
-                kafkaproducer.flush()
+        baseDir = '/home/u/senate/'
+        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd='.')
+        pro0.wait()
+        pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId], stdin=None, stdout=None, cwd='.')
+        pro1.wait()
+        #put a symbol message to kafka
+        sha256 = hashlib.sha256()
+        while True:
+            sha256.update('{0}'.format(globalId).encode('utf-8'))
+            sha256.update('{0}'.format(alias).encode('utf-8'))
+            hashCode = sha256.hexdigest()
+            symbol = hashCode[:5]
+            symbol = symbol.upper()
+            res = session.execute('select symbol from issuer0 where symbol = %s', [symbol]).one()
+            if res:
+                continue
+            res = session.execute('select word from reserved0 where word = %s', [symbol]).one()
+            if res:
+                continue
+            #end the loop
+            break
+        kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
+        kafkaproducer.send('symbol3', key=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'),
+                           value=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'))
+        kafkaproducer.flush()
+        cluster.shutdown()
 
 class SymbolHandler(HandleBase):
-    def process(self):
+    def queueName(self):
+        return 'symbol3'
+
+    def processProposal(self, proposal):
+        (globalId, symbol) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        kafka = KafkaConsumer('symbol3',
-                              group_id='clique3',
-                              bootstrap_servers=kafkaHost.split(','))
-        executionCounter = zk.Counter("/executions", default=0x7000)
-        for m in kafka:
-            while self.checkLoad():
-                print('it is too hot, sleep 2 seconds')
-                time.sleep(2)
+        [alias] = session.execute('select alias from player0  where global_id=%s', [globalId]).one()
+        if not alias:
+            logging.error('alias can not be None')
+            return
+        baseDir = '/home/u/senate/'
+        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd='.')
+        pro0.wait()
+        pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias, symbol, globalId], stdin=None, stdout=None, cwd='.')
+        pro1.wait()
 
-            payload = str(m.value, 'utf-8')
-            (globalId, symbol) = payload.split('||')
-            executionCounter += 1
-            executionId = executionCounter.value
-            stmt = """
-            insert into executions(id, code, ts, payload)
-            values(%s, 'symbol', toTimestamp(now()), %s)
-            """
-            session.execute(stmt, [executionId, payload])
-
-            pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd=workshopInstance)
-            pro0.wait()
-            pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias, symbol, globalId], stdin=None, stdout=None, cwd=workshopInstance)
-            pro1.wait()
 
 class IssueHandler(HandleBase):
     def queueName(self):
@@ -407,6 +374,12 @@ if __name__ == '__main__':
 #    alias = AliasHandler()
 #    alias.process()
 
-    a = TransferHandler()
+    #a = TransferHandler()
     #a = IssueHandler()
+    pid = os.fork()
+    if pid > 0:
+        time.sleep(1)
+        a = AliasHandler()
+    else:
+        a = SymbolHandler()
     a.process()
