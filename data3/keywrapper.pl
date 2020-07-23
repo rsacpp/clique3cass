@@ -17,13 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with Clique3. If not, see <http://www.gnu.org/licenses/>.
 
-
+#!/usr/bin/perl
 my $dir = $ARGV[0];
 my $bits = $ARGV[1];
-# $cmd = 'call the prime number generator to generate 3 pairs'
-# d.key = [pqr@@d]
-# jg.key = [pqr@@f]
-# e.key = [pqr@@0x10003] 0x10003 instead of 0x10001
-my $cmd = qq%
-%;
+print("dir=$dir,bits=$bits\n");
+my $cmd = qq%$dir/openssl-1.0.2o/apps/openssl genrsa $bits|$dir/openssl-1.0.2o/apps/openssl asn1parse|/usr/bin/perl parseoutput.pl
+    %;
+print("$cmd\n");
 system($cmd);
