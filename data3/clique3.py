@@ -124,10 +124,11 @@ class SymbolHandler(HandleBase):
     def processProposal(self, proposal):
         (globalId, symbol) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        [alias] = session.execute('select alias from player0  where global_id=%s', [globalId]).one()
-        if not alias:
+        res = session.execute('select alias from player0  where global_id=%s', [globalId]).one()
+        if not res:
             logging.error('alias can not be None')
             return
+        [alias] = res
         baseDir = '/home/u/senate/'
         pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd='.')
         pro0.wait()
