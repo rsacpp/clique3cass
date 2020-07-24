@@ -39,6 +39,7 @@ primary key(id)
 );
 create index player0_pq on player0(pq);
 create index player0_global_id on player0(global_id);
+create index player0_alias on player0(alias);
 
 create table issuer0(
 id bigint,
@@ -98,6 +99,7 @@ ts timestamp,
 payload text,
 primary key(id)
 );
+create index executions_code on executions(code);
 
 create table runtime(
 id int,
