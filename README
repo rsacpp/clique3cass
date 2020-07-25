@@ -1,0 +1,2 @@
+--reset 
+truncate table player0; truncate table issuer0; truncate table ownership0; truncate table note_catalog0; truncate table executions;
