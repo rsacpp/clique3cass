@@ -9,11 +9,12 @@ import binascii
 import logging
 import random
 
+from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
 from kazoo.client import KazooClient
 from kafka import KafkaProducer, KafkaConsumer
-from sys import argv
+# from sys import argv
 
 
 def handle_exit(signum):
@@ -359,23 +360,49 @@ if __name__ == '__main__':
     sys.stdin.close()
     freopen('/tmp/testout', 'a', sys.stdout)
     freopen('/tmp/testerr', 'a', sys.stderr)
-    instance = argv[1]
-    if instance == 'issue0':
-        logging.basicConfig(filename='issue0.log', level=logging.INFO)
-        var = IssueProposalHandler()
-    if instance == 'issue3':
-        logging.basicConfig(filename='issue3.log', level=logging.INFO)
-        var = IssueHandler()
-    if instance == 'transfer0':
-        logging.basicConfig(filename='transfer0.log', level=logging.INFO)
-        var = TransferProposalHandler()
-    if instance == 'transfer3':
-        logging.basicConfig(filename='transfer3.log', level=logging.INFO)
-        var = TransferHandler()
-    if instance == 'symbol3':
-        logging.basicConfig(filename='symbol3.log', level=logging.INFO)
-        var = SymbolHandler()
-    if instance == 'alias3':
-        logging.basicConfig(filename='alias3.log', level=logging.INFO)
-        var = AliasHandler()
-    var.process()
+
+    logging.basicConfig(filename='clique3.log', level=logging.INFO)
+    issuePropsalHandler = IssueProposalHandler()
+    issue0 = Process(target=issuePropsalHandler.process)
+    issue0.start()
+
+    issuehandler = IssueHandler()
+    issue3 = Process(target=issuehandler.process)
+    issue3.start()
+
+    transferProposalHandler = TransferProposalHandler()
+    transfer0 = Process(target=transferProposalHandler.process)
+    transfer0.start()
+
+    transferHandler = TransferHandler()
+    transfer3 = Process(target=transferHandler.process)
+    transfer3.start()
+
+    aliasHandler = AliasHandler()
+    alias3 = Process(target=aliasHandler.process)
+    alias3.start()
+
+    symbolHandler = SymbolHandler()
+    symbol3 = Process(target=symbolHandler.process)
+    symbol3.start()
+
+    # instance = argv[1]
+    # if instance == 'issue0':
+    #     logging.basicConfig(filename='issue0.log', level=logging.INFO)
+    #     var = IssueProposalHandler()
+    # if instance == 'issue3':
+    #     logging.basicConfig(filename='issue3.log', level=logging.INFO)
+    #     var = IssueHandler()
+    # if instance == 'transfer0':
+    #     logging.basicConfig(filename='transfer0.log', level=logging.INFO)
+    #     var = TransferProposalHandler()
+    # if instance == 'transfer3':
+    #     logging.basicConfig(filename='transfer3.log', level=logging.INFO)
+    #     var = TransferHandler()
+    # if instance == 'symbol3':
+    #     logging.basicConfig(filename='symbol3.log', level=logging.INFO)
+    #     var = SymbolHandler()
+    # if instance == 'alias3':
+    #     logging.basicConfig(filename='alias3.log', level=logging.INFO)
+    #     var = AliasHandler()
+    # var.process()
