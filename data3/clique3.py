@@ -8,13 +8,14 @@ import configparser
 import binascii
 import logging
 import random
+import socket
 
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
 from kazoo.client import KazooClient
 from kafka import KafkaProducer, KafkaConsumer
-# from sys import argv
+from cryptography.fernet import Fernet
 
 
 def handle_exit(signum):
@@ -67,6 +68,31 @@ class HandleBase:
             """
             session.execute(stmt, [executionId, queueName, proposal])
             self.processProposal(proposal)
+
+    def postTxn(self, txn):
+        cluster, session, kafkaHost, zk = super().setup()
+        res = session.execute('select peer, pq, d from clique3.channel where port =12821 limit 1').one()
+        if res:
+            [peer, pq, d] = res
+            key = Fernet.generate_key()
+            sock =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((peer, 12821))
+            cipher_str = str(binascii.b2a_hex(base64.urlsafe_b64decode(key)), 'utf-8')
+            args = './crypt', pq, d, cipher_str
+            with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
+                cipher = p.stdout.read()
+                if cipher:
+                    cipher = str(cipher, 'utf-8').strip()
+                    cipher = '^^^>>CIPHER<<{0}$$$'.format(cipher)
+                    size = len(cipher)
+                    sock.send(bytes('{:08}'.format(size), 'utf-8'))
+                    sock.send(bytes(cipher, 'utf-8'))
+                    f = Fernet(key)
+                    token = f.encrypt(bytes(txn, 'utf-8'))
+                    sock.send(bytes('{:08}'.format(len(token)), 'utf-8'))
+                    sock.send(token)
+                    sock.shutdown(socket.SHUT_RDWR)
+                    sock.close()
 
     def processProposal(self, proposal):
         pass
@@ -185,6 +211,8 @@ class IssueHandler(HandleBase):
         else:
             self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(),
                                        symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
+            txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
+            super().postTxn(txnTxt)
         cluster.shutdown()
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext, symbol, noteId, quantity, target):
@@ -268,6 +296,8 @@ class TransferHandler(HandleBase):
                      format(pq, symbol, noteId, quantity, lastsig))
         if self.verify(pq, symbol, noteId, quantity, lastsig):
             self.save2ownershipcatalog(pq, verdict, prop, rawtext, symbol, noteId, quantity, target, lastsig)
+            txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
+            super().postTxn(txnTxt)
         cluster.shutdown()
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
