@@ -9,6 +9,8 @@ import binascii
 import logging
 import random
 import socket
+import base64
+import subprocess
 
 from multiprocessing import Process
 from subprocess import Popen, PIPE
@@ -70,7 +72,7 @@ class HandleBase:
             self.processProposal(proposal)
 
     def postTxn(self, txn):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost, zk = self.setup()
         res = session.execute('select peer, pq, d from clique3.channel where port =12821 limit 1').one()
         if res:
             [peer, pq, d] = res
@@ -212,6 +214,7 @@ class IssueHandler(HandleBase):
             self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(),
                                        symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
             txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
+            logging.info(txnTxt)
             super().postTxn(txnTxt)
         cluster.shutdown()
 
@@ -380,16 +383,16 @@ class TransferProposalHandler(HandleBase):
 
 
 if __name__ == '__main__':
-    signal.signal(signal.SIGINT, handle_exit)
-    signal.signal(signal.SIGTERM, handle_exit)
-    pid = os.fork()
-    if pid > 0:
-        time.sleep(3)
-        sys.exit(0)
-    os.setsid()
-    sys.stdin.close()
-    freopen('/tmp/testout', 'a', sys.stdout)
-    freopen('/tmp/testerr', 'a', sys.stderr)
+    # signal.signal(signal.SIGINT, handle_exit)
+    # signal.signal(signal.SIGTERM, handle_exit)
+    # pid = os.fork()
+    # if pid > 0:
+    #     time.sleep(3)
+    #     sys.exit(0)
+    # os.setsid()
+    # sys.stdin.close()
+    # freopen('/tmp/testout', 'a', sys.stdout)
+    # freopen('/tmp/testerr', 'a', sys.stderr)
 
     logging.basicConfig(filename='clique3.log', level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
@@ -415,7 +418,7 @@ if __name__ == '__main__':
     symbolHandler = SymbolHandler()
     symbol3 = Process(target=symbolHandler.process)
     symbol3.start()
-
+    # from sys import argv
     # instance = argv[1]
     # if instance == 'issue0':
     #     logging.basicConfig(filename='issue0.log', level=logging.INFO)
