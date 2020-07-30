@@ -77,7 +77,7 @@ class HandleBase:
         if res:
             [peer, pq, d] = res
             key = Fernet.generate_key()
-            sock =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((peer, 12821))
             cipher_str = str(binascii.b2a_hex(base64.urlsafe_b64decode(key)), 'utf-8')
             args = './crypt', pq, d, cipher_str
