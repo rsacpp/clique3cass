@@ -180,19 +180,19 @@ class IssueHandler(HandleBase):
         pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]], stdin=None, stdout=PIPE)
         checksum0 = pro1.communicate()[0].decode().strip()
         checksum0 = checksum0.rstrip('0')
-        logging.info('checksum0 = {0}'.format(checksum0))
+        # logging.info('checksum0 = {0}'.format(checksum0))
         [symbol] = session.execute('select symbol from issuer0 where pq = %s limit 1', [pq]).one()
-        logging.info('symbol = {0}, pq = {1}'.format(symbol, pq))
+        # logging.info('symbol = {0}, pq = {1}'.format(symbol, pq))
         [step1path] = session.execute('select step1repo from runtime where id = 0 limit 1').one()
         if not step1path:
             logging.error('step1path can not be None')
             return
         step1path = '{0}/{1}'.format(step1path, super().path(symbol))
-        logging.info('step1path = {0}'.format(step1path))
+        # logging.info('step1path = {0}'.format(step1path))
         pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol), prop, checksum0], stdin=None, stdout=PIPE)
         verdict = pro3.communicate()[0].decode().strip()
         verdict = verdict.rstrip('0')
-        logging.info('verdict = {0}'.format(verdict))
+        # logging.info('verdict = {0}'.format(verdict))
         pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
         note = pro2.communicate()[0].decode().strip()
         note = note.rstrip('0')
@@ -214,7 +214,7 @@ class IssueHandler(HandleBase):
             self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(),
                                        symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
             txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
-            logging.info(txnTxt)
+            # logging.info(txnTxt)
             super().postTxn(txnTxt)
         cluster.shutdown()
 
@@ -289,7 +289,7 @@ class TransferHandler(HandleBase):
             logging.error('invalid msg: {0}'.format(note))
             return
         rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
-        logging.info('rawtext = {0}'.format(rawtext))
+        # logging.info('rawtext = {0}'.format(rawtext))
         (left, right) = rawtext.split('->')
         (target, lastsig, lastblock) = right.split('@@')
         # lastsig = lastsig[:-2]
@@ -375,7 +375,7 @@ class TransferProposalHandler(HandleBase):
         """
         [folder] = session.execute(stmt).one()
         (alias, rawCode, lastTxn, lastBlock, globalId) = payload.split('&&')
-        logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
+        # logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
         pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(folder, super().path(alias), alias), rawCode, lastTxn, globalId, lastBlock],
                      stdin=None, stdout=None)
         pro3.wait()
