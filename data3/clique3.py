@@ -196,9 +196,7 @@ class IssueHandler(HandleBase):
         pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
         note = pro2.communicate()[0].decode().strip()
         note = note.rstrip('0')
-        print("verdict={0} note={1}".format(verdict, note))
         if not note.startswith('5e5e'):
-            print('invalid msg:{0}'.format(note))
             return
         else:
             rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
@@ -223,11 +221,9 @@ class IssueHandler(HandleBase):
         zkc = zk.Counter("/ownershipId3", default=0x700)
         zkc += 1
         ownershipId = zkc.value
-        print("ownershipId={0}".format(ownershipId))
         zkc = zk.Counter("/noteId3", default=0x700)
         zkc += 1
         rowId = zkc.value
-        print("rowId={0}".format(rowId))
         zk.stop()
         zk.close()
         sha256 = hashlib.sha256()
