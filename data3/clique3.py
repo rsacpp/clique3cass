@@ -379,16 +379,16 @@ class TransferProposalHandler(HandleBase):
 
 
 if __name__ == '__main__':
-    # signal.signal(signal.SIGINT, handle_exit)
-    # signal.signal(signal.SIGTERM, handle_exit)
-    # pid = os.fork()
-    # if pid > 0:
-    #     time.sleep(3)
-    #     sys.exit(0)
-    # os.setsid()
-    # sys.stdin.close()
-    # freopen('/tmp/testout', 'a', sys.stdout)
-    # freopen('/tmp/testerr', 'a', sys.stderr)
+    signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+    pid = os.fork()
+    if pid > 0:
+        time.sleep(3)
+        sys.exit(0)
+    os.setsid()
+    sys.stdin.close()
+    freopen('/tmp/testout', 'a', sys.stdout)
+    freopen('/tmp/testerr', 'a', sys.stderr)
 
     logging.basicConfig(filename='clique3.log', level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
