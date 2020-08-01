@@ -71,6 +71,8 @@ hash_code text,
 primary key(note_id)
 );
 create index ownership0_seq on ownership0(seq);
+create index ownership0_symbol on ownership0(symbol);
+
 
 create table note_catalog0(
 id bigint,

@@ -387,8 +387,8 @@ if __name__ == '__main__':
         sys.exit(0)
     os.setsid()
     sys.stdin.close()
-    freopen('/tmp/testout', 'a', sys.stdout)
-    freopen('/tmp/testerr', 'a', sys.stderr)
+    freopen('/tmp/clique3cassout', 'a', sys.stdout)
+    freopen('/tmp/clique3casserr', 'a', sys.stderr)
 
     logging.basicConfig(filename='clique3.log', level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
