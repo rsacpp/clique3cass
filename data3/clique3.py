@@ -253,10 +253,11 @@ class IssueHandler(HandleBase):
         # save into 2 tables ownership0& note_catalog0
         session.execute("""
         insert into ownership0(seq, clique, symbol, note_id, quantity, owner, \
-        updated, hash_code)values(%s, '3', %s, %s, %s, %s, \
-        toTimestamp(now()), %s)
+        updated, hash_code, verdict0)values(%s, '3', %s, %s, %s, %s, \
+        toTimestamp(now()), %s, %s)
         """, [int(ownershipId), symbol.strip(), noteId.strip(),
-              int(quantity.strip()), target.strip(), hashcode.strip()])
+              int(quantity.strip()), target.strip(),
+              hashcode.strip(), verdict[-16:]])
 
         session.execute("""
         insert into note_catalog0(id, clique, pq, verdict, proposal, note, \
@@ -329,19 +330,17 @@ class TransferHandler(HandleBase):
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
-        [owner0] = session.execute("""
-        select owner from ownership0 where note_id = %s
+        [owner0, verdict0] = session.execute("""
+        select owner, verdict0 from ownership0 where note_id = %s
         """, [noteId]).one()
         [owner1] = session.execute("""
         select alias from player0 where pq = %s
         """, [pq]).one()
-        [verdict] = session.execute("""
-        select verdict from note_catalog0 where note = %s
-        """, ['{0}||{1}||{2}'.format(symbol, noteId, quantity)]).one()
+
         cluster.shutdown()
         logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
-        lastsig = {3}'.format(owner0, owner1, verdict[-16:], lastsig))
-        return owner0 == owner1 and verdict[-16:] == lastsig
+        lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
+        return owner0 == owner1 and verdict0 == lastsig
 
     def save2ownershipcatalog(self, pq, verdict, proposal,
                               rawtext, symbol, noteId, quantity,
@@ -352,7 +351,7 @@ class TransferHandler(HandleBase):
         rowId = zkc.value
         session.execute("""
         update ownership0 set owner= %s , updated = toTimestamp(now()) \
-        where note_id = %s""", [target, noteId])
+        verdict0 = %s where note_id = %s""", [target, verdict[-16:], noteId])
         sha256 = hashlib.sha256()
         sha256.update("{0}{1}".format(noteId.strip(),
                                       target.strip()).encode('utf-8'))
