@@ -1,2 +1,7 @@
 --reset 
 truncate table player0; truncate table issuer0; truncate table ownership0; truncate table note_catalog0; truncate table executions;
+
+--MOUNT filer
+sudo yum -y install amazon-efs-utils
+sudo mount -t efs fs-92eb45da:/ /mnt/efs/
+
