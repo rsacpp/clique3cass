@@ -66,6 +66,7 @@ symbol text,
 note_id text,
 quantity int,
 owner text,
+verdict0 text,
 updated timestamp,
 hash_code text,
 primary key(note_id)
