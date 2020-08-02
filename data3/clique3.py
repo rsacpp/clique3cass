@@ -2,7 +2,6 @@
 import os
 import time
 import sys
-import signal
 import hashlib
 import configparser
 import binascii
@@ -65,21 +64,23 @@ class HandleBase:
             executionCounter += 1
             executionId = executionCounter.value
             stmt = """
-            insert into executions(id, code, ts, payload)
-            values(%s, %s, toTimestamp(now()), %s)
+            insert into executions(id, code, ts, payload) \
+            values(%s, %s, toTimestamp(now()), %s) \
             """
             session.execute(stmt, [executionId, queueName, proposal])
             self.processProposal(proposal)
 
     def postTxn(self, txn):
         cluster, session, kafkaHost, zk = self.setup()
-        res = session.execute('select peer, pq, d from clique3.channel where port =12821 limit 1').one()
+        res = session.execute('select peer, pq, d from clique3.channel \
+        where port =12821 limit 1').one()
         if res:
             [peer, pq, d] = res
             key = Fernet.generate_key()
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((peer, 12821))
-            cipher_str = str(binascii.b2a_hex(base64.urlsafe_b64decode(key)), 'utf-8')
+            cipher_str = str(binascii.b2a_hex(
+                base64.urlsafe_b64decode(key)), 'utf-8')
             args = './crypt', pq, d, cipher_str
             with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
                 cipher = p.stdout.read()
@@ -118,9 +119,11 @@ class AliasHandler(HandleBase):
         (alias, globalId) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
         baseDir = '/home/u/senate/'
-        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd='.')
+        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'],
+                     stdin=None, stdout=None, cwd='.')
         pro0.wait()
-        pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId], stdin=None, stdout=None, cwd='.')
+        pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId],
+                     stdin=None, stdout=None, cwd='.')
         pro1.wait()
         # put a symbol message to kafka
         sha256 = hashlib.sha256()
@@ -130,17 +133,19 @@ class AliasHandler(HandleBase):
             hashCode = sha256.hexdigest()
             symbol = hashCode[:5]
             symbol = symbol.upper()
-            res = session.execute('select symbol from issuer0 where symbol = %s', [symbol]).one()
+            res = session.execute('select symbol from issuer0 \
+            where symbol = %s', [symbol]).one()
             if res:
                 continue
-            res = session.execute('select word from reserved0 where word = %s', [symbol]).one()
+            res = session.execute('select word from reserved0 \
+            where word = %s', [symbol]).one()
             if res:
                 continue
             # end the loop
             break
         kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
-        kafkaproducer.send('symbol3', key=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'),
-                           value=bytes('{0}||{1}'.format(globalId, symbol), 'utf-8'))
+        kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
+        kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
         kafkaproducer.flush()
         cluster.shutdown()
         time.sleep(2)
@@ -153,15 +158,18 @@ class SymbolHandler(HandleBase):
     def processProposal(self, proposal):
         (globalId, symbol) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        res = session.execute('select alias from player0  where global_id=%s', [globalId]).one()
+        res = session.execute('select alias from player0 \
+        where global_id=%s', [globalId]).one()
         if not res:
             logging.error('alias can not be None')
             return
         [alias] = res
         baseDir = '/home/u/senate/'
-        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'], stdin=None, stdout=None, cwd='.')
+        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl',
+                      baseDir, '2048'], stdin=None, stdout=None, cwd='.')
         pro0.wait()
-        pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias, symbol, globalId], stdin=None, stdout=None, cwd='.')
+        pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias,
+                      symbol, globalId], stdin=None, stdout=None, cwd='.')
         pro1.wait()
         time.sleep(2)
 
@@ -177,19 +185,23 @@ class IssueHandler(HandleBase):
         prop = prop.strip()
         stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
         (checksumpq, checksumd) = session.execute(stmt).one()
-        pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]], stdin=None, stdout=PIPE)
+        pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]],
+                     stdin=None, stdout=PIPE)
         checksum0 = pro1.communicate()[0].decode().strip()
         checksum0 = checksum0.rstrip('0')
         # logging.info('checksum0 = {0}'.format(checksum0))
-        [symbol] = session.execute('select symbol from issuer0 where pq = %s limit 1', [pq]).one()
+        [symbol] = session.execute('select symbol from issuer0 \
+        where pq = %s limit 1', [pq]).one()
         # logging.info('symbol = {0}, pq = {1}'.format(symbol, pq))
-        [step1path] = session.execute('select step1repo from runtime where id = 0 limit 1').one()
+        [step1path] = session.execute('select step1repo from runtime \
+        where id = 0 limit 1').one()
         if not step1path:
             logging.error('step1path can not be None')
             return
         step1path = '{0}/{1}'.format(step1path, super().path(symbol))
         # logging.info('step1path = {0}'.format(step1path))
-        pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol), prop, checksum0], stdin=None, stdout=PIPE)
+        pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol),
+                      prop, checksum0], stdin=None, stdout=PIPE)
         verdict = pro3.communicate()[0].decode().strip()
         verdict = verdict.rstrip('0')
         # logging.info('verdict = {0}'.format(verdict))
@@ -204,19 +216,27 @@ class IssueHandler(HandleBase):
         target = right[:-2]
         (symbol, noteId, quantity) = left.split('||')
         symbol = symbol[2:]
-        res = session.execute('select note_id from ownership0 where note_id = %s limit 1', [noteId]).one()
+        res = session.execute('select note_id from ownership0 \
+        where note_id = %s limit 1', [noteId]).one()
         if res:
             logging.error("the note {0} is already in place".format(noteId))
             return
         else:
-            self.save2ownershipcatalog(pq.strip(), verdict.strip(), prop.strip(), rawtext.strip(),
-                                       symbol.strip(), noteId.strip(), quantity.strip(), target.strip())
+            self.save2ownershipcatalog(pq.strip(),
+                                       verdict.strip(),
+                                       prop.strip(),
+                                       rawtext.strip(),
+                                       symbol.strip(),
+                                       noteId.strip(),
+                                       quantity.strip(),
+                                       target.strip())
             txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
             # logging.info(txnTxt)
             super().postTxn(txnTxt)
         cluster.shutdown()
 
-    def save2ownershipcatalog(self, pq, verdict, proposal, rawtext, symbol, noteId, quantity, target):
+    def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
+                              symbol, noteId, quantity, target):
         cluster, session, kafkaHost, zk = super().setup()
         zkc = zk.Counter("/ownershipId3", default=0x700)
         zkc += 1
@@ -227,19 +247,25 @@ class IssueHandler(HandleBase):
         zk.stop()
         zk.close()
         sha256 = hashlib.sha256()
-        sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
+        sha256.update("{0}{1}".format(noteId.strip(),
+                                      target.strip()).encode('utf-8'))
         hashcode = sha256.hexdigest()
         # save into 2 tables ownership0& note_catalog0
         session.execute("""
-        insert into ownership0(seq, clique, symbol, note_id, quantity, owner, updated, hash_code)
-        values(%s, '3', %s, %s, %s, %s, toTimestamp(now()), %s)
+        insert into ownership0(seq, clique, symbol, note_id, quantity, owner, \
+        updated, hash_code)values(%s, '3', %s, %s, %s, %s, \
+        toTimestamp(now()), %s)
         """, [int(ownershipId), symbol.strip(), noteId.strip(),
               int(quantity.strip()), target.strip(), hashcode.strip()])
 
         session.execute("""
-        insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
+        insert into note_catalog0(id, clique, pq, verdict, proposal, note, \
+        recipient, hook, stmt, setup, hash_code)
         values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
-        """, [int(rowId), pq.strip(), verdict.strip(), proposal.strip(), "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity.strip()), target.strip(), rawtext.strip(), hashcode.strip()])
+        """, [int(rowId), pq.strip(), verdict.strip(), proposal.strip(),
+              "{0}||{1}||{2}".format(symbol.strip(),
+                                     noteId.strip(), quantity.strip()),
+              target.strip(), rawtext.strip(), hashcode.strip()])
         cluster.shutdown()
 
 
@@ -272,8 +298,8 @@ class TransferHandler(HandleBase):
             logging.error('step1path can not be None')
             return
         step1path = '{0}/{1}'.format(step1path, super().path(alias))
-        pro1 = Popen(['{0}/step1{1}'.format(step1path, alias), prop, checksum0],
-                     stdin=None, stdout=PIPE)
+        pro1 = Popen(['{0}/step1{1}'.format(step1path, alias),
+                      prop, checksum0], stdin=None, stdout=PIPE)
         verdict = pro1.communicate()[0].decode().strip()
         verdict = verdict.rstrip('0')
 
@@ -291,10 +317,12 @@ class TransferHandler(HandleBase):
         # lastsig = lastsig[:-2]
         (symbol, noteId, quantity) = left.split('||')
         symbol = symbol.split('::')[1]
-        logging.info('pq = {0}, symbol= {1}, noteId= {2}, quantity= {3}, lastsig ={4}'.
-                     format(pq, symbol, noteId, quantity, lastsig))
+        logging.info('pq = {0}, symbol= {1}, noteId= {2}, quantity= {3}, \
+        lastsig ={4}'.format(pq, symbol, noteId, quantity, lastsig))
         if self.verify(pq, symbol, noteId, quantity, lastsig):
-            self.save2ownershipcatalog(pq, verdict, prop, rawtext, symbol, noteId, quantity, target, lastsig)
+            self.save2ownershipcatalog(pq, verdict, prop,
+                                       rawtext, symbol, noteId,
+                                       quantity, target, lastsig)
             txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
             super().postTxn(txnTxt)
         cluster.shutdown()
@@ -311,22 +339,30 @@ class TransferHandler(HandleBase):
         select verdict from note_catalog0 where note = %s
         """, ['{0}||{1}||{2}'.format(symbol, noteId, quantity)]).one()
         cluster.shutdown()
+        logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
+        lastsig = {3}'.format(owner0, owner1, verdict[-16:], lastsig))
         return owner0 == owner1 and verdict[-16:] == lastsig
 
-    def save2ownershipcatalog(self, pq, verdict, proposal, rawtext, symbol, noteId, quantity, target, lastsig):
+    def save2ownershipcatalog(self, pq, verdict, proposal,
+                              rawtext, symbol, noteId, quantity,
+                              target, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
         zkc = zk.Counter("/noteId3", default=0x7000)
         zkc += 1
         rowId = zkc.value
         session.execute("""
-        update ownership0 set owner= %s , updated = toTimestamp(now()) where note_id = %s
-        """, [target, noteId])
+        update ownership0 set owner= %s , updated = toTimestamp(now()) \
+        where note_id = %s""", [target, noteId])
         sha256 = hashlib.sha256()
-        sha256.update("{0}{1}".format(noteId.strip(), target.strip()).encode('utf-8'))
+        sha256.update("{0}{1}".format(noteId.strip(),
+                                      target.strip()).encode('utf-8'))
         hashcode = sha256.hexdigest()
-        session.execute("""insert into note_catalog0(id, clique, pq, verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
-        values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
-        """, [int(rowId), pq, verdict, proposal, "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity), target, lastsig, rawtext, hashcode])
+        session.execute("""insert into note_catalog0(id, clique, pq, \
+        verdict, proposal, note, recipient, hook, stmt, setup, hash_code) \
+        values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s) \
+        """, [int(rowId), pq, verdict, proposal,
+              "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity),
+              target, lastsig, rawtext, hashcode])
         cluster.shutdown()
 
 
@@ -355,7 +391,10 @@ class IssueProposalHandler(HandleBase):
         """
         [folder] = session.execute(stmt).one()
         text = "||{0}||{1}->".format(noteId, quantity)
-        pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/issuer{2}.py'.format(folder, super().path(symbol), symbol), text, globalId], stdin=None, stdout=None)
+        pro3 = Popen(['/usr/bin/python3',
+                      '/{0}/{1}/issuer{2}.py'.format(
+                          folder, super().path(symbol), symbol),
+                      text, globalId], stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
 
@@ -372,13 +411,17 @@ class TransferProposalHandler(HandleBase):
         [folder] = session.execute(stmt).one()
         (alias, rawCode, lastTxn, lastBlock, globalId) = payload.split('&&')
         # logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
-        pro3 = Popen(['/usr/bin/python3', '/{0}/{1}/payer{2}.py'.format(folder, super().path(alias), alias), rawCode, lastTxn, globalId, lastBlock],
+        pro3 = Popen(['/usr/bin/python3',
+                      '/{0}/{1}/payer{2}.py'.format(
+                          folder, super().path(alias), alias),
+                      rawCode, lastTxn, globalId, lastBlock],
                      stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
 
 
 if __name__ == '__main__':
+    import signal
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
     pid = os.fork()
@@ -390,7 +433,7 @@ if __name__ == '__main__':
     freopen('/tmp/clique3cassout', 'a', sys.stdout)
     freopen('/tmp/clique3casserr', 'a', sys.stderr)
 
-    logging.basicConfig(filename='clique3.log', level=logging.INFO)
+    logging.basicConfig(filename='clique3.log', level=logging.DEBUG)
     issuePropsalHandler = IssueProposalHandler()
     issue0 = Process(target=issuePropsalHandler.process)
     issue0.start()
