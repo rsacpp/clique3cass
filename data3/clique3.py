@@ -280,6 +280,7 @@ class TransferHandler(HandleBase):
         return 'transfer3'
 
     def processProposal(self, proposal):
+        logging.info(proposal)
         cluster, session, kafkaHost, zk = super().setup()
         (pq, prop) = proposal.split('@@')
         pq = pq.strip()
@@ -294,12 +295,14 @@ class TransferHandler(HandleBase):
         select alias from player0 where pq = %s
         """, [pq]).one()
         alias = alias.strip()
+        logging.info(alias)
         if not alias:
             logging.error('alias can not be None')
             return
         [step1path] = session.execute("""
         select step1repo from runtime where id = 0 limit 1
         """).one()
+        logging.info(step1path)
         if not step1path:
             logging.error('step1path can not be None')
             return
@@ -313,6 +316,7 @@ class TransferHandler(HandleBase):
         note = pro2.communicate()[0].decode().strip()
         note = note.strip()
         note = note.rstrip('0')
+        logging.info(note)
         if not note.startswith('5e5e'):
             logging.error('invalid msg: {0}'.format(note))
             return
@@ -323,8 +327,8 @@ class TransferHandler(HandleBase):
         # lastsig = lastsig[:-2]
         (symbol, noteId, quantity) = left.split('||')
         symbol = symbol.split('::')[1]
-        logging.info('pq = {0}, symbol= {1}, noteId= {2}, quantity= {3}, \
-        lastsig ={4}'.format(pq, symbol, noteId, quantity, lastsig))
+        logging.info('pq = {0}, symbol= {1}, noteId = {2}, quantity = {3}, \
+        lastsig = {4}'.format(pq, symbol, noteId, quantity, lastsig))
         if self.verify(pq, symbol, noteId, quantity, lastsig):
             self.save2ownershipcatalog(pq, verdict, prop,
                                        rawtext, symbol, noteId,
@@ -371,6 +375,7 @@ class TransferHandler(HandleBase):
         """, [int(rowId), pq, verdict, proposal,
               "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity),
               target, lastsig, rawtext, hashcode])
+        logging.info('saving completes')
         cluster.shutdown()
 
 
@@ -441,7 +446,9 @@ if __name__ == '__main__':
     freopen('/tmp/clique3cassout', 'a', sys.stdout)
     freopen('/tmp/clique3casserr', 'a', sys.stderr)
 
-    logging.basicConfig(filename='senate.log', level=logging.INFO)
+    fmt0 = '%(asctime)-15s:%(lineno)s %(message)s'
+    logging.basicConfig(filename='senate.log', format=fmt0,
+                        level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
     issue0 = Process(target=issuePropsalHandler.process)
     issue0.start()
