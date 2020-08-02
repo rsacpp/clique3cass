@@ -443,8 +443,8 @@ if __name__ == '__main__':
         sys.exit(0)
     os.setsid()
     sys.stdin.close()
-    freopen('/tmp/clique3cassout', 'a', sys.stdout)
-    freopen('/tmp/clique3casserr', 'a', sys.stderr)
+    freopen('./stdoutclique3', 'a', sys.stdout)
+    freopen('./stderrclique3', 'a', sys.stderr)
 
     fmt0 = '%(asctime)-15s:%(lineno)s %(message)s'
     logging.basicConfig(filename='senate.log', format=fmt0,
