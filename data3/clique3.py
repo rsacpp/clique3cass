@@ -18,6 +18,10 @@ from kazoo.client import KazooClient
 from kafka import KafkaProducer, KafkaConsumer
 from cryptography.fernet import Fernet
 
+config = configparser.ConfigParser()
+config.read('config.ini')
+baseDir = config['clique3cass']['senate']
+
 
 def handle_exit(signum):
     sys.exit(0)
@@ -118,7 +122,7 @@ class AliasHandler(HandleBase):
     def processProposal(self, proposal):
         (alias, globalId) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        baseDir = '/home/u/senate/'
+
         pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'],
                      stdin=None, stdout=None, cwd='.')
         pro0.wait()
@@ -164,7 +168,7 @@ class SymbolHandler(HandleBase):
             logging.error('alias can not be None')
             return
         [alias] = res
-        baseDir = '/home/u/senate/'
+
         pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl',
                       baseDir, '2048'], stdin=None, stdout=None, cwd='.')
         pro0.wait()
