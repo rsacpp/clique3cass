@@ -23,7 +23,7 @@ counter = -10
 for c in ar:
     text = '{0}{0}{0}{0}'.format(c)
     for c2 in ar:
-        print("insert into reserved0(id, word)values({0},'{1}');".format(counter, '{0}{1}'.format(c2,text)))
+        print("insert into reserved0(seq, word)values({0},'{1}');".format(counter, '{0}{1}'.format(c2,text)))
         counter -= 1
-        print("insert into reserved0(id, word)values({0},'{1}');".format(counter, '{0}{1}'.format(text,c2)))
+        print("insert into reserved0(seq, word)values({0},'{1}');".format(counter, '{0}{1}'.format(text,c2)))
         counter -= 1
