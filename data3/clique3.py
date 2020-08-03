@@ -153,6 +153,7 @@ class AliasHandler(HandleBase):
         kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
         kafkaproducer.flush()
         cluster.shutdown()
+        zk.stop()
         time.sleep(2)
 
 
@@ -176,6 +177,8 @@ class SymbolHandler(HandleBase):
         pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias,
                       symbol, globalId], stdin=None, stdout=None, cwd='.')
         pro1.wait()
+        zk.stop()
+        cluster.shutdown()
         time.sleep(2)
 
 
@@ -239,6 +242,7 @@ class IssueHandler(HandleBase):
             # logging.info(txnTxt)
             super().postTxn(txnTxt)
         cluster.shutdown()
+        zk.stop()
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
@@ -336,6 +340,7 @@ class TransferHandler(HandleBase):
             txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
             super().postTxn(txnTxt)
         cluster.shutdown()
+        zk.stop()
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
@@ -347,6 +352,7 @@ class TransferHandler(HandleBase):
         """, [pq]).one()
 
         cluster.shutdown()
+        zk.stop()
         logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
         lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         if owner0 == owner1 and verdict0 == lastsig:
@@ -377,6 +383,7 @@ class TransferHandler(HandleBase):
               target, lastsig, rawtext, hashcode])
         logging.info('saving completes')
         cluster.shutdown()
+        zk.stop()
 
 
 class IssueProposalHandler(HandleBase):
@@ -410,6 +417,7 @@ class IssueProposalHandler(HandleBase):
                       text, globalId], stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
+        zk.stop()
 
 
 class TransferProposalHandler(HandleBase):
@@ -431,6 +439,7 @@ class TransferProposalHandler(HandleBase):
                      stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
+        zk.stop()
 
 
 if __name__ == '__main__':
