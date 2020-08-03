@@ -455,7 +455,7 @@ if __name__ == '__main__':
     freopen('./stdoutclique3', 'a', sys.stdout)
     freopen('./stderrclique3', 'a', sys.stderr)
 
-    fmt0 = '%(name)s %(levelname)s %(asctime)-15s:%(lineno)s %(message)s'
+    fmt0 = '%(name)s %(levelname)s %(asctime)-15s %(pathname)s:%(lineno)s %(message)s'
     logging.basicConfig(filename='senate.log', format=fmt0,
                         level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
