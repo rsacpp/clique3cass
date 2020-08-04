@@ -155,6 +155,7 @@ class AliasHandler(HandleBase):
         kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
         kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
         kafkaproducer.flush()
+        kafkaproducer.close()
         cluster.shutdown()
         zk.stop()
         zk.close()
