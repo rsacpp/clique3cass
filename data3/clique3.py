@@ -105,7 +105,6 @@ class HandleBase:
         zk.close()
         cluster.shutdown()
 
-
     def processProposal(self, proposal):
         pass
 
