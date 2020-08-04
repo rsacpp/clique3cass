@@ -101,6 +101,10 @@ class HandleBase:
                     sock.send(token)
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
+        zk.stop()
+        zk.close()
+        cluster.shutdown()
+
 
     def processProposal(self, proposal):
         pass
@@ -154,6 +158,7 @@ class AliasHandler(HandleBase):
         kafkaproducer.flush()
         cluster.shutdown()
         zk.stop()
+        zk.close()
         time.sleep(2)
 
 
@@ -178,6 +183,7 @@ class SymbolHandler(HandleBase):
                       symbol, globalId], stdin=None, stdout=None, cwd='.')
         pro1.wait()
         zk.stop()
+        zk.close()
         cluster.shutdown()
         time.sleep(2)
 
@@ -243,6 +249,7 @@ class IssueHandler(HandleBase):
             super().postTxn(txnTxt)
         cluster.shutdown()
         zk.stop()
+        zk.close()
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
@@ -341,6 +348,7 @@ class TransferHandler(HandleBase):
             super().postTxn(txnTxt)
         cluster.shutdown()
         zk.stop()
+        zk.close()
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
@@ -353,6 +361,7 @@ class TransferHandler(HandleBase):
 
         cluster.shutdown()
         zk.stop()
+        zk.close()
         logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
         lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         if owner0 == owner1 and verdict0 == lastsig:
@@ -384,6 +393,7 @@ class TransferHandler(HandleBase):
         logging.info('saving completes')
         cluster.shutdown()
         zk.stop()
+        zk.close()
 
 
 class IssueProposalHandler(HandleBase):
@@ -418,6 +428,7 @@ class IssueProposalHandler(HandleBase):
         pro3.wait()
         cluster.shutdown()
         zk.stop()
+        zk.close()
 
 
 class TransferProposalHandler(HandleBase):
@@ -440,6 +451,7 @@ class TransferProposalHandler(HandleBase):
         pro3.wait()
         cluster.shutdown()
         zk.stop()
+        zk.close()
 
 
 if __name__ == '__main__':
