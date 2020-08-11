@@ -62,6 +62,7 @@ class HandleBase:
                               bootstrap_servers=kafkaHost.split(','))
         executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
+            logging.info(m)
             while self.checkLoad():
                 logging.info('it is too hot, sleep 2 seconds')
                 time.sleep(2)
