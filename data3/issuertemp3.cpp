@@ -1,7 +1,7 @@
 /**
 * issuertemp.cpp for Clique3
 * Copyright (C) 2018, Gu Jun
-* 
+*
 * This file is part of Clique3.
 * Clique3 is  free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -22,25 +22,22 @@
 #include <cstring>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
+/*
+ * g++ issuertemp3.cpp bn40.cpp -lboost_system -lpthread
+ */
 string* digest(string* input){
   using namespace std;
-  /* string* input = new string(argv[1]); */
-  string* symbol = new string("SYMBOL");
-  string* alias = new string("ALIAS");
-  
+
   if((input->find("5e5e") !=0 )||(input->rfind("2424") + 4 != input->length())){
     delete input;
-    delete symbol;
-    delete alias;
+
     cout<<"format error"<<endl;
     return NULL;
   }
-  //manipulate the input
-  input->insert(4, *symbol);
-  input->insert(input->length() - 4 , *alias);
 
   string* key = new string("KEY");
   int pos = key->find("@@");
@@ -51,9 +48,10 @@ string* digest(string* input){
   bn40* _val = fromhex(input);
   bn40* _pq = fromhex(pq);
   bn40* r = npmod(_val,_cre,_pq);
-  /* cout<<*pq<<"@@";*/
+
   string* r2 = r->tohex();
-  /* cout<< *r2<<endl; */
+
+
   delete r2;
   delete _pq;
   delete r;
@@ -63,8 +61,6 @@ string* digest(string* input){
   delete input;
   delete id;
   delete key;
-  delete symbol;
-  delete alias;
 
   string* rr = new string(*pq + "@@" + *r2);
   return rr;
@@ -73,39 +69,51 @@ string* digest(string* input){
 int
 main(int argc, char* argv[]){
     try{
-    boost::asio::io_service io_service;
-    tcp::resolver resolver(io_service);
-    tcp::resolver::query query(tcp::v4(), argv[1], "21822");
-    tcp::resolver::iterator iterator = resolver.resolve(query);
-    tcp::socket s(io_service);
-    boost::asio::connect(s, iterator);
-    
-    using namespace std;
+      using boost::asio::ip::tcp;
+      boost::asio::io_service io_service;
+      tcp::resolver resolver(io_service);
+      tcp::resolver::query query(tcp::v4(), argv[1], "21822");
+      tcp::resolver::iterator iterator = resolver.resolve(query);
+      tcp::socket s(io_service);
+      boost::asio::connect(s, iterator);
 
-    string* key = new string("KEY");
-    int pos = key->find("@@");
-    string* pq = new string(key->substr(0,pos));
-    string* id = new string(key->substr(pos + 2));
-    bn40* _cre = fromhex(id);
-    string req = string(*pq + '||' + argv[1]);
-    size_t req_length = req.length();
-    string size_string = str(boost::format("%08d") % req_length);
-    boost::asio::write(s, boost::asio::buffer(size_string.c_str(), 8));
-    boost::asio::write(s, boost::asio::buffer(req.c_str(), req_length));
-    // get the note id from remote;
-    char reply_size[8];
-    boost::asio::read(s, boost::asio::buffer(reply_size, 8));
-    /*char request[] = "sslfdakdslflslldfs";
-      size_t request_length = strlen(request);*/
-    boost::asio::read(s, boost::asio::buffer(req.c_str(), req_length));
-    
-    delete _cre;
-    delete id;
-    delete pq;
-    delete key;
-  }catch (std::exception& e){
-    std::cerr << "Exception: " << e.what() << "\n";
-  }
-    
-  
+      using namespace std;
+
+      string* key = new string("KEY");
+      int pos = key->find("@@");
+      string* pq = new string(key->substr(0,pos));
+      /*
+      string* id = new string(key->substr(pos + 2));
+      bn40* _cre = fromhex(id);
+      */
+      string req = string(*pq + "||" + argv[1]);
+      string size0 = boost::str(boost::format("%08d") % req.length());
+      boost::asio::write(s, boost::asio::buffer(size0.c_str(), 8));
+      boost::asio::write(s, boost::asio::buffer(req.c_str(), req.length()));
+      // get the note id from remote;
+      char size1buff[8];
+      boost::asio::read(s, boost::asio::buffer(size1buff, 8));
+      string size1 = string(size1buff, size1buff + 8);
+      size_t thesize1 = boost::lexical_cast<size_t>(size1);
+      char notebuff[thesize1];
+      boost::asio::read(s, boost::asio::buffer(notebuff, thesize1));
+      string noteId = string(notebuff, notebuff + thesize1);
+      //if noteId does not start with "SYMBOL", then exit;
+      if(noteId.rfind("SYMBOL", 0) != 0){
+	cout<<"symbol conflicts"<<endl;
+      }else{
+	string raw = string("^^"+noteId +"->ALIAS$$");
+	string* code = new string(boost::algorithm::hex(raw));
+	boost::algorithm::to_lower(*code);
+	string* output = digest(code);
+	string size2 = boost::str(boost::format("%08d") % output->length());
+	boost::asio::write(s, boost::asio::buffer(size2.c_str(), 8));
+	boost::asio::write(s, boost::asio::buffer(output->c_str(), output->length()));
+	delete output;
+      }
+      delete pq;
+      delete key;
+    }catch (std::exception& e){
+      std::cerr << "Exception: " << e.what() << "\n";
+    }
 }
