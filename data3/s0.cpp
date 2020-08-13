@@ -28,3 +28,4 @@ int main(int argc, char* argv[]){
 
 // g++ -lboost_system -lpthread s0.cpp -o s0
 // boost 1.53
+// yum install -y boost-iostreams boost-devel
