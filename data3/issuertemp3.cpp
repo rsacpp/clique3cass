@@ -120,7 +120,7 @@ main(int argc, char* argv[]){
       boost::asio::read(s, boost::asio::buffer(notebuff, thesize1));
       /* encrypted noteId, format: ^^PQ||SIG$$*/
       string noteId = string(notebuff, notebuff + thesize1);
-      size_t pos0 = noteId.find("||");
+      /*      size_t pos0 = noteId.find("||");
       string pq0 = noteId.substr(2, pos0 - 2);
       string val0 = noteId.substr(pos0 + 2, noteId.length() - pos0 - 4);
       bn40* _pq = fromhex(pq0);
@@ -129,7 +129,7 @@ main(int argc, char* argv[]){
       _e->addat(0, 0x10001);
       bn40* _res = npmod(_val, _e, _pq);
       string* rr = _res->tohex();
-      rr = rtrim0(rr);
+      rr = rtrim0(rr);*/
       //if noteId does not start with "SYMBOL", then exit;
       if(noteId.rfind("SYMBOL", 0) != 0){
 	cout<<"symbol conflicts"<<endl;
@@ -143,11 +143,11 @@ main(int argc, char* argv[]){
 	boost::asio::write(s, boost::asio::buffer(output->c_str(), output->length()));
 	delete output;
       }
-      delete rr;
-      delete _res;
-      delete _pq;
-      delete _val;
-      delete _e;
+      //      delete rr;
+      //      delete _res;
+      //      delete _pq;
+      //      delete _val;
+      // delete _e;
       delete pq;
       delete key;
     }catch (std::exception& e){
