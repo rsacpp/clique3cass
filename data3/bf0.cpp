@@ -5,6 +5,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <iostream>
 
 int main(int argc, char* argv[]){
   try{
