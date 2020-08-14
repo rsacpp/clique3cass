@@ -24,7 +24,27 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+
+string* rtrim0(string* input){
+  if(input->compare(string("0")) == 0){
+    delete input;
+    input = new string("");
+    return input;
+  }
+  size_t size = input->length();
+  string left = input->substr(0, size - 1);
+  string right = input->substr(size -1 , 1);
+  if(right.compare(string("0")) == 0){
+    delete input;
+    input = new string(left);
+    return rtrim0(input);
+  }else{
+    return input;
+  }
+}
+
 
 /*
  * g++ issuertemp3.cpp bn40.cpp -lboost_system -lpthread
@@ -66,6 +86,7 @@ string* digest(string* input){
   return rr;
 }
 
+
 int
 main(int argc, char* argv[]){
     try{
@@ -97,7 +118,18 @@ main(int argc, char* argv[]){
       size_t thesize1 = boost::lexical_cast<size_t>(size1);
       char notebuff[thesize1];
       boost::asio::read(s, boost::asio::buffer(notebuff, thesize1));
+      /* encrypted noteId, format: ^^PQ||SIG$$*/
       string noteId = string(notebuff, notebuff + thesize1);
+      size_t pos0 = noteId.find("||");
+      string pq0 = noteId.substr(2, pos0 - 2);
+      string val0 = noteId.substr(pos0 + 2, noteId.length() - pos0 - 4);
+      bn40* _pq = fromhex(pq0);
+      bn40* _val = fromhex(val0);
+      bn40* _e = new bn40(1);
+      _e->addat(0, 0x10001);
+      bn40* _res = npmod(_val, _e, _pq);
+      string* rr = _res->tohex();
+      rr = rtrim0(rr);
       //if noteId does not start with "SYMBOL", then exit;
       if(noteId.rfind("SYMBOL", 0) != 0){
 	cout<<"symbol conflicts"<<endl;
@@ -111,6 +143,11 @@ main(int argc, char* argv[]){
 	boost::asio::write(s, boost::asio::buffer(output->c_str(), output->length()));
 	delete output;
       }
+      delete rr;
+      delete _res;
+      delete _pq;
+      delete _val;
+      delete _e;
       delete pq;
       delete key;
     }catch (std::exception& e){
