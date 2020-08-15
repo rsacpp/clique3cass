@@ -43,6 +43,10 @@ string* digest(string* input){
   bn40* _pq = fromhex(pq);
   bn40* r = npmod(_val,_cre,_pq);
   string* r2 = r->tohex();
+
+  string* rr = new string(*pq + "@@" + *r2);
+  std::cout<<"proposal:"<<*rr<<std::endl;
+
   delete r2;
   delete r;
   delete _pq;
@@ -52,7 +56,7 @@ string* digest(string* input){
   delete pq;
   delete key;
   delete input;
-  string* rr = new string(*pq + "@@" + *r2);
+
   return rr;
 }
 
@@ -72,7 +76,7 @@ main(int argc, char* argv[]){
       string* key = new string("KEY");
       int pos = key->find("@@");
       string* pq = new string(key->substr(0,pos));
-      string req = string(*pq + "||" + argv[1]);
+      string req = string("^^"+*pq + "||" + argv[2]+"$$");
       string size0 = boost::str(boost::format("%08d") % req.length());
       boost::asio::write(s, boost::asio::buffer(size0.c_str(), 8));
       boost::asio::write(s, boost::asio::buffer(req.c_str(), req.length()));
@@ -97,7 +101,7 @@ main(int argc, char* argv[]){
       string* rr01 = _r01->tohex();
       string code01 = rtrim0(*rr01);
       string raw_noteId = string(boost::algorithm::unhex(code01));
-      std::cout<<"raw noteId:"<<raw_noteId<<std::endl;
+      std::cout<<"note:"<<raw_noteId<<std::endl;
       delete rr01;
       delete _r01;
       delete _e01;

@@ -1,20 +1,4 @@
--- 
--- clique3.sql(for postgresql) for Clique3
--- Copyright (C) 2018, Gu Jun
--- 
--- This file is part of Clique3.
--- Clique3 is  free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or (at
--- your option) any later version.
 
--- Clique3 is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
-
--- You should have received a copy of the GNU General Public License
--- along with Clique3. If not, see <http://www.gnu.org/licenses/>.
 create keyspace clique3 with replication={'class':'SimpleStrategy', 'replication_factor': 1};
 
 create table channel(
@@ -26,6 +10,8 @@ e text,
 primary key(peer, port)
 );
 create index channel_port on channel(port);
+
+insert into clique3.channel(peer, port, pq, d)values('*', 21822, 'd3d19b266dcc7393b544f5d4cb582d3cf44d4a4d3a4254ad875d5d253e43fa97293f8c133c9ac8242abf73a42cbad81abccfa36f4042d93a252313070d6ea4db6fe1bba792aa9e17c486bac695a9dbbf883d6a2ce287213db015970a366f9eefd940b0ce13263624876dc9c7c2015e2b8d1829568bb60d4be2d591d81a1ee70f', '97abccdfb45a4829aafa4be61ebb13c55a7b1a994111a3513906c9d47a8dcc1267aa81915f8b123bfc6d8a3c77117ae3a14c466abaf8ac0616dbc533e125b314cb7b0232563eadbe3b29293a051ce4cd21181cadb96e02fa2b4c63cdd47f0f158ff016c14b3f176e996eab78eaaeeb728a4758a243f90b0a118f1bccef1ffe7a');
 
 insert into channel(peer, port, pq, d, e)values('127.0.0.1', 12821,'d19ef43ec1f584d92f6bddd41bdc722d8867fc33e276c655d050127e1699e3c641e757a11b6e8cc783b08104b70610ec3889965fe6495d439073eb0cad3bc381f86b099f1206ad1e565a2f85d035322f67caa011bbc3bebd797ffc23ca259d74003c6abfd1e31ba5f1b271d0fee6528733d3d20c82d337d43c64704e9848d575dcf4db8095f97ea9d4baa6ab0f21ae13e0b076e6970c43d70d4fd6115e15524865044a71c60134dcb98bd35de7c68203561a2da37986eda7be66e3b37949fabc00b596d07ded713de3ce172a29f0f62a0b57ae32c099c2461567d7ecd5533ef6ace70f1791085878c810bafcc3480adb50c4896a45b3e39c675b3fd6f8eacb6e','9b425c123b5b611432494f21dad84056162b45dfdb06cd03dce2fe94b82387fa987bb887af0ccd04538d677f60099f8212dd58cec58d177d81c1888b5302b86511d4ed151a4ec5d37ab5a728ef8924888937dec3d8831c9f2de62789b5f1dab51eb197a03bac754e5d0b2dbbaecfca434769404491c0489858c79bd771d54d3585645dca465fc77bc954ea75b6ea8882a42e2eb069f6b9e5af0eb327b8ae1826719b7211765123e2e8ea161f802a4f0f38b342b976c22fea515bf59c1fd6e0b14a4ad987b4042c8f8660d5c681657d2e51b8987900aef95c330f368b060a46084ec547104788bd3040c98c93fc21251f3176e56127cea580a9532a02083e8a45' ,'');
 
