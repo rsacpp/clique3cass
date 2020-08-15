@@ -20,13 +20,9 @@ string rtrim0(string a){
       break;
     }
   }
-  /*  cout<<index<<endl; */
   return a.substr(0, index+1);
 }
 
-/*
- * g++ issuertemp3.cpp bn40.cpp -lboost_system -lpthread
- */
 string* digest(string* input){
   using namespace std;
   if((input->find("5e5e") !=0 )||(input->rfind("2424") + 4 != input->length())){
@@ -91,9 +87,7 @@ main(int argc, char* argv[]){
       string* note_hex = new string(notebuff, notebuff + thesize1);
       string* pq01 = new string("d3d19b266dcc7393b544f5d4cb582d3cf44d4a4d3a4254ad875d5d253e43fa97293f8c133c9ac8242abf73a42cbad81abccfa36f4042d93a252313070d6ea4db6fe1bba792aa9e17c486bac695a9dbbf883d6a2ce287213db015970a366f9eefd940b0ce13263624876dc9c7c2015e2b8d1829568bb60d4be2d591d81a1ee70f");
       string* e01 = new string("989c091c6c210412a12dbecb068de36f");
-      /*
-	string d01 = string("97abccdfb45a4829aafa4be61ebb13c55a7b1a994111a3513906c9d47a8dcc1267aa81915f8b123bfc6d8a3c77117ae3a14c466abaf8ac0616dbc533e125b314cb7b0232563eadbe3b29293a051ce4cd21181cadb96e02fa2b4c63cdd47f0f158ff016c14b3f176e996eab78eaaeeb728a4758a243f90b0a118f1bccef1ffe7a");
-       */
+
       bn40* _note_hex = fromhex(note_hex);
       bn40* _pq01 = fromhex(pq01);
       bn40* _e01 = fromhex(e01);
