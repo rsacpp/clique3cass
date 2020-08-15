@@ -13,12 +13,12 @@ from kafka import KafkaProducer
 
 
 class Handler0(socketserver.BaseRequestHandler):
-    def setupCass():
+    def setupCass(self):
         cluster = Cluster(argv[1].split(','))
         session = cluster.connect('clique3')
         return session, cluster
 
-    def setupKafka():
+    def setupKafka(self):
         kafkaProducer = KafkaProducer(bootstrap_servers=argv[2].split(','))
         return kafkaProducer
 
@@ -26,20 +26,22 @@ class Handler0(socketserver.BaseRequestHandler):
 class AliasHandler(Handler0):
     # will recv request on user creation
     def handle(self):
+        session, cluster = self.setupCass()
+        kafkaProducer = self.setupKafka()
         try:
-            session, cluster = self.setupCass()
-            kafkaProducer = self.setupKafka()
             r0 = session.execute('select pq, e from channel \
 where port = 21823').one()
             if not r0:
                 logging.info('no pq, e information, exit')
                 return
             pq, e = r0.pq, r0.e
+            logging.debug("pq = {}, e= {}".format(pq, e))
             count = str(self.request.recv(8).strip(), 'utf-8')
             if not count or not int(count):
                 logging.info('got None payload')
                 return
             payload = str(self.request.recv(int(count)).strip(), 'utf-8')
+            logging.debug(payload)
             if not payload:
                 logging.info('got None payload')
             args = './crypt', pq, e, payload
@@ -47,6 +49,7 @@ where port = 21823').one()
                 output = p.stdout.read()
                 output = output.rstrip('0')
             rawCode = binascii.a2b_hex(output)
+            logging.debug(output)
             logging.debug(rawCode)
             if not rawCode[:2] == '^^' or not rawCode[-2:] == '$$':
                 logging.info('rawCode format wrong, will ignore')
@@ -63,21 +66,23 @@ where port = 21823').one()
 
 class IssueHandler(Handler0):
     def handle(self):
+        session, cluster = self.setupCass()
+        kafkaProducer = self.setupKafka()
         try:
-            session, cluster = self.setupCass()
-            kafkaProducer = self.setupKafka()
-            r0 = session.execute('select pq, e from channel \
+            r0 = session.execute('select pq, d from channel \
 where port = 21822').one()
             if r0:
-                pq, e = r0.pq, r0.e
+                pq, d = r0.pq, r0.d
             else:
                 logging.info('pq/e can not be None')
                 return
+            logging.debug('pq = {0}, d = {1}'.format(pq, d))
             count = str(self.request.recv(8).strip(), 'utf-8')
             if not count or not int(count):
                 logging.info('got None payload')
                 return
             payload = str(self.request.recv(int(count)).strip(), 'utf-8')
+            logging.debug(payload)
             if not payload:
                 logging.info('got None payload')
             # the payload format: ^^pq||8$$
@@ -113,7 +118,7 @@ where note_id = %s', [noteId])
             logging.debug('noteId = {0}'.format(noteId))
             reply = '^^{0}||{1}||{2}$$'.format(symbol, noteId, quantity)
             code = str(binascii.b2a_hex(bytes(reply, 'utf-8')), 'utf-8')
-            args = './crypt', pq, e, code
+            args = './crypt', pq, d, code
             with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
                 output = p.stdout.read()
                 size = len(output)
@@ -127,8 +132,8 @@ where note_id = %s', [noteId])
                 payload = self.request.recv(count).strip()
                 kafkaProducer.send('issue3', key=uuid.uuid4().bytes,
                                    value=payload)
-        except Exception as err:
-            logging.error(err)
+#        except Exception as err:
+#            logging.error(err)
         finally:
             cluster.shutdown()
             kafkaProducer.close()
@@ -158,14 +163,14 @@ if __name__ == '__main__':
 %(thread)d %(pathname)s:%(lineno)s %(message)s"
     logging.basicConfig(format=fmt0,
                         filename='clique0.log',
-                        level=logging.INFO)
+                        level=logging.DEBUG)
 
-    with socketserver.TCPServer((argv[1], 21821), TransferHandler) as transfer:
-        p21821 = Process(target=transfer.serve_forever)
-        p21821.start()
+    # with socketserver.TCPServer((argv[1], 21821), TransferHandler) as transfer:
+    #     p21821 = Process(target=transfer.serve_forever)
+    #     p21821.start()
     with socketserver.TCPServer((argv[1], 21822), IssueHandler) as issue:
         p21822 = Process(target=issue.serve_forever)
         p21822.start()
-    with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
-        p21823 = Process(target=alias.server_forever)
-        p21823.start()
+    # with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
+    #     p21823 = Process(target=alias.server_forever)
+    #     p21823.start()
