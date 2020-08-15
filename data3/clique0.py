@@ -90,15 +90,15 @@ where port = 21822').one()
                 logging.info('rawCode format wrong, will ignore')
                 return
             payload = payload[2:-2]
-            pq, quantity = payload.split('||')
+            pq0, quantity0 = payload.split('||')
             if not pq:
                 logging.info('pq can not be empty')
                 return
-            if not quantity or quantity not in ['8', '2', '1']:
-                logging.info('quantity is not valid: {0}'.format(quantity))
+            if not quantity0 or quantity0 not in ['8', '2', '1']:
+                logging.info('quantity is not valid: {0}'.format(quantity0))
                 return
             r0 = session.execute('select symbol from issuer0 \
-where pq = %s', [pq]).one()
+where pq = %s', [pq0]).one()
             if r0:
                 symbol = r0.symbol
             else:
@@ -108,7 +108,7 @@ where pq = %s', [pq]).one()
             while True:
                 sha256.update("{0}".format(symbol).encode('utf-8'))
                 sha256.update("{0}".format(random.random()).encode('utf-8'))
-                sha256.update("{0}".format(quantity).encode('utf-8'))
+                sha256.update("{0}".format(quantity0).encode('utf-8'))
                 digest = sha256.hexdigest()
                 noteId = digest[-8:]
                 r0 = session.execute('select * from clique3.ownership0 \
@@ -116,20 +116,26 @@ where note_id = %s', [noteId])
                 if not r0:
                     break
             logging.debug('noteId = {0}'.format(noteId))
-            reply = '^^{0}||{1}||{2}$$'.format(symbol, noteId, quantity)
+            reply = '^^{0}||{1}||{2}$$'.format(symbol, noteId, quantity0)
+            logging.debug(reply)
             code = str(binascii.b2a_hex(bytes(reply, 'utf-8')), 'utf-8')
+            logging.debug(code)
             args = './crypt', pq, d, code
             with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
-                output = p.stdout.read()
+                output = p.stdout.read().strip()
                 size = len(output)
+                logging.debug(output)
             self.request.send(bytes('{:08}'.format(size), 'utf-8'))
             self.request.send(output)
+
             count = str(self.request.recv(8).strip(), 'utf-8')
+            logging.debug('count={0}'.format(count))
             if not count or not int(count):
                 logging.info('got None count, exit')
                 return
             else:
-                payload = self.request.recv(count).strip()
+                payload = self.request.recv(int(count)).strip()
+                logging.debug(payload.decode('utf-8'))
                 kafkaProducer.send('issue3', key=uuid.uuid4().bytes,
                                    value=payload)
 #        except Exception as err:
