@@ -1,22 +1,4 @@
 #!/usr/bin/python3
-#
-# importissuer2cass.py for Clique3
-# Copyright (C) 2018, Gu Jun
-#
-# This file is part of Clique3.
-# Clique3 is  free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or (at
-# your option) any later version.
-
-# Clique3 is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with Clique3. If not, see <http://www.gnu.org/licenses/>.
-
 from kazoo.client import KazooClient
 from cassandra.cluster import Cluster
 import hashlib
@@ -78,4 +60,5 @@ os.popen('mkdir -p {0};mkdir -p {1}'.format(playerrepo, step1repo))
 print("playerepo = {0}, step1repo = {1}".format(playerrepo, step1repo))
 os.popen("mv issuer{0}.py {1}".format(symbol, playerrepo))
 os.popen("mv issuer{0}    {1}".format(symbol, playerrepo))
+os.popen("mv issuer3{0} {1}".format(symbol, playerrepo))
 os.popen("mv step1{0}    {1}".format(symbol, step1repo))

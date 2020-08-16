@@ -50,5 +50,5 @@ system($cmd);
 # import.py
 system("/usr/bin/python3 import2cass.py $userid $globalId ");
 # end of import.py
-$cmd = "rm payer$userid.cpp payer$userid.cpp.t step1$userid.cpp.t step1$userid.cpp payer$userid.py.t jg.key d.key e.key";
+$cmd = "rm payer3$userid.cpp payer3$userid.cpp.t payer$userid.cpp payer$userid.cpp.t step1$userid.cpp.t step1$userid.cpp payer$userid.py.t jg.key d.key e.key";
 system($cmd);

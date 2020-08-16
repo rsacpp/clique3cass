@@ -75,5 +75,5 @@ system($cmd);
 
 system("/usr/bin/python3 importissuer2cass.py $userid $symbol $globalId");
 
-$cmd = "rm issuer$symbol.cpp issuer$symbol.cpp.t issuer$symbol.py.t jg.key d.key e.key step1$symbol.cpp step1$symbol.cpp.t";
+$cmd = "rm issuer3$symbol.cpp issuer3$symbol.cpp.t issuer$symbol.cpp issuer$symbol.cpp.t issuer$symbol.py.t jg.key d.key e.key step1$symbol.cpp step1$symbol.cpp.t";
 system($cmd);
