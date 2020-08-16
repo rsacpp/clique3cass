@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import os
+import time
+import sys
 import socketserver
 import subprocess
 import binascii
@@ -10,6 +13,18 @@ from sys import argv
 from multiprocessing import Process
 from cassandra.cluster import Cluster
 from kafka import KafkaProducer
+
+
+def handle_exit(signum):
+    sys.exit(0)
+
+
+def freopen(f, mode, stream):
+    oldf = open(f, mode)
+    oldfd = oldf.fileno()
+    newfd = stream.fileno()
+    os.close(newfd)
+    os.dup2(oldfd, newfd)
 
 
 class Handler0(socketserver.BaseRequestHandler):
@@ -191,5 +206,5 @@ if __name__ == '__main__':
         p21822 = Process(target=issue.serve_forever)
         p21822.start()
     with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
-         p21823 = Process(target=alias.server_forever)
-         p21823.start()
+        p21823 = Process(target=alias.server_forever)
+        p21823.start()
