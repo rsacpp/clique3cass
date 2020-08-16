@@ -35,6 +35,7 @@ main(int argc, char* argv[]){
     bn40* r = npmod(_val,_cre,_pq);
     string* r2 = r->tohex();
     string* output = new string(*pq +"@@"+ *r2);
+    cout<<"proposal:"<<*output<<endl;
     string size0 = boost::str(boost::format("%08d") % output->length());
     boost::asio::write(s, boost::asio::buffer(size0.c_str(), 8));
     boost::asio::write(s, boost::asio::buffer(output->c_str(), output->length()));
