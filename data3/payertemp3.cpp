@@ -17,7 +17,7 @@ main(int argc, char* argv[]){
     boost::asio::connect(s, iterator);
 
     using namespace std;
-    string* input = new string(boost::algorithm::hex(string(argv[1])));
+    string* input = new string(boost::algorithm::hex(string(argv[2])));
     boost::algorithm::to_lower(*input);
 
     if((input->find("5e5e") !=0 )||(input->rfind("2424") + 4 != input->length())){
