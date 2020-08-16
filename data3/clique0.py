@@ -147,8 +147,8 @@ where note_id = %s', [noteId])
 
 class TransferHandler(Handler0):
     def handle(self):
+        kafkaProducer = self.setupKafka()
         try:
-            kafkaProducer = self.setupKafka()
             count = str(self.request.recv(8).strip(), 'utf-8')
             if not count or not int(count):
                 logging.info('got None payload')
@@ -156,6 +156,7 @@ class TransferHandler(Handler0):
             payload = self.request.recv(int(count)).strip()
             if not payload:
                 logging.info('got None payload')
+            logging.debug(payload.decode('utf-8'))
             kafkaProducer.send('transfer3', key=uuid.uuid4().bytes,
                                value=payload)
         except Exception as err:
@@ -171,9 +172,9 @@ if __name__ == '__main__':
                         filename='clique0.log',
                         level=logging.DEBUG)
 
-    # with socketserver.TCPServer((argv[1], 21821), TransferHandler) as transfer:
-    #     p21821 = Process(target=transfer.serve_forever)
-    #     p21821.start()
+    with socketserver.TCPServer((argv[1], 21821), TransferHandler) as transfer:
+        p21821 = Process(target=transfer.serve_forever)
+        p21821.start()
     with socketserver.TCPServer((argv[1], 21822), IssueHandler) as issue:
         p21822 = Process(target=issue.serve_forever)
         p21822.start()
