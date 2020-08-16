@@ -29,7 +29,7 @@ class AliasHandler(Handler0):
         session, cluster = self.setupCass()
         kafkaProducer = self.setupKafka()
         try:
-            r0 = session.execute('select pq, e from channel \
+            r0 = session.execute('select pq, e from clique3.channel \
 where port = 21823').one()
             if not r0:
                 logging.info('no pq, e information, exit')
@@ -138,8 +138,8 @@ where note_id = %s', [noteId])
                 logging.debug(payload.decode('utf-8'))
                 kafkaProducer.send('issue3', key=uuid.uuid4().bytes,
                                    value=payload)
-#        except Exception as err:
-#            logging.error(err)
+        except Exception as err:
+            logging.error(err)
         finally:
             cluster.shutdown()
             kafkaProducer.close()
