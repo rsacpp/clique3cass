@@ -6,7 +6,6 @@ import hashlib
 import configparser
 import binascii
 import logging
-import random
 import socket
 import base64
 import subprocess
@@ -127,7 +126,6 @@ class AliasHandler(HandleBase):
     def processProposal(self, proposal):
         (alias, globalId) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-
         pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'],
                      stdin=None, stdout=None, cwd='.')
         pro0.wait()
@@ -404,28 +402,31 @@ class IssueProposalHandler(HandleBase):
     def processProposal(self, payload):
         cluster, session, kafkaHost, zk = super().setup()
         (symbol, quantity, globalId) = payload.split('||')
-        sha256 = hashlib.sha256()
-        while True:
-            sha256.update("{0}".format(symbol).encode('utf-8'))
-            sha256.update("{0}".format(random.random()).encode('utf-8'))
-            sha256.update("{0}".format(quantity).encode('utf-8'))
-            digest = sha256.hexdigest()
-            length = len(digest)
-            noteId = digest[length-8:]
-            res = session.execute("""
-            select * from ownership0 where note_id = %s
-            """, [noteId])
-            if not res:
-                break
+        # sha256 = hashlib.sha256()
+        # while True:
+        #     sha256.update("{0}".format(symbol).encode('utf-8'))
+        #     sha256.update("{0}".format(random.random()).encode('utf-8'))
+        #     sha256.update("{0}".format(quantity).encode('utf-8'))
+        #     digest = sha256.hexdigest()
+        #     length = len(digest)
+        #     noteId = digest[length-8:]
+        #     res = session.execute("""
+        #     select * from ownership0 where note_id = %s
+        #     """, [noteId])
+        #     if not res:
+        #         break
         stmt = """
         select playerrepo from runtime where id=0
         """
         [folder] = session.execute(stmt).one()
-        text = "||{0}||{1}->".format(noteId, quantity)
-        pro3 = Popen(['/usr/bin/python3',
-                      '/{0}/{1}/issuer{2}.py'.format(
-                          folder, super().path(symbol), symbol),
-                      text, globalId], stdin=None, stdout=None)
+        # text = "||{0}||{1}->".format(noteId, quantity)
+        # pro3 = Popen(['/usr/bin/python3',
+        #               '/{0}/{1}/issuer{2}.py'.format(
+        #                   folder, super().path(symbol), symbol),
+        #               text, globalId], stdin=None, stdout=None)
+        pro3 = Popen(['/{0}/{1}/issuer3{2}'.format(
+            folder, super().path(symbol), symbol),
+                      'localhost', quantity], stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
         zk.stop()
@@ -444,11 +445,17 @@ class TransferProposalHandler(HandleBase):
         [folder] = session.execute(stmt).one()
         (alias, rawCode, lastTxn, lastBlock, globalId) = payload.split('&&')
         # logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
-        pro3 = Popen(['/usr/bin/python3',
-                      '/{0}/{1}/payer{2}.py'.format(
-                          folder, super().path(alias), alias),
-                      rawCode, lastTxn, globalId, lastBlock],
-                     stdin=None, stdout=None)
+        # pro3 = Popen(['/usr/bin/python3',
+        #               '/{0}/{1}/payer{2}.py'.format(
+        #                   folder, super().path(alias), alias),
+        #               rawCode, lastTxn, globalId, lastBlock],
+        #              stdin=None, stdout=None)
+        raw = "^^{0}::{1}@@{2}@@{3}$$".format(
+            alias, rawCode, lastTxn, lastBlock)
+        logging.info(raw)
+        pro3 = Popen(['/{0}/{1}/payer3{2}'.format(
+            folder, super().path(alias), alias),
+                      'localhost', raw], stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
         zk.stop()
