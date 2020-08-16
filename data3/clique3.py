@@ -200,21 +200,22 @@ class IssueHandler(HandleBase):
                 return
             pq = pq.strip()
             prop = prop.strip()
-            stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
+            stmt = """select checksumpq, checksumd from runtime
+            where id = 0 limit 1"""
             (checksumpq, checksumd) = session.execute(stmt).one()
             pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]],
                          stdin=None, stdout=PIPE)
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
             logging.debug('checksum0 = {0}'.format(checksum0))
-            [symbol] = session.execute('select symbol from issuer0 \
-where pq = %s limit 1', [pq]).one()
+            [symbol] = session.execute("""select symbol from issuer0
+            where pq = %s limit 1""", [pq]).one()
             if not symbol:
                 logging.error('no symbol for pq:{0}'.format(pq))
-                return ;
+                return
             logging.debug('symbol = {0}, pq = {1}'.format(symbol, pq))
-            [step1path] = session.execute('select step1repo from runtime \
-where id = 0 limit 1').one()
+            [step1path] = session.execute("""select step1repo from runtime
+            where id = 0 limit 1""").one()
             if not step1path:
                 logging.error('step1path can not be None')
                 return
@@ -239,7 +240,7 @@ where id = 0 limit 1').one()
             res = session.execute('select note_id from ownership0 \
 where note_id = %s limit 1', [noteId]).one()
             if res:
-                logging.error("the note {0} is already in place".format(noteId))
+                logging.error("the note {0} is already there".format(noteId))
                 return
             else:
                 self.save2ownershipcatalog(pq.strip(),
@@ -250,7 +251,10 @@ where note_id = %s limit 1', [noteId]).one()
                                            noteId.strip(),
                                            quantity.strip(),
                                            target.strip())
-                txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
+                txnTxt = '{0}||{1}||{2}||{3}'.format(pq,
+                                                     prop,
+                                                     verdict,
+                                                     '30001')
                 logging.debug(txnTxt)
                 super().postTxn(txnTxt)
         except Exception as err:
@@ -259,7 +263,6 @@ where note_id = %s limit 1', [noteId]).one()
             cluster.shutdown()
             zk.stop()
             zk.close()
-
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
