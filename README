@@ -4,6 +4,7 @@ truncate table clique3.issuer0;
 truncate table clique3.ownership0;
 truncate table clique3.note_catalog0;
 truncate table clique3.executions;
+truncate table clique3.global_entry;
 
 --MOUNT filer
 sudo yum -y install amazon-efs-utils
