@@ -193,62 +193,73 @@ class IssueHandler(HandleBase):
 
     def processProposal(self, proposal):
         cluster, session, kafkaHost, zk = super().setup()
-        (pq, prop) = proposal.split('@@')
-        pq = pq.strip()
-        prop = prop.strip()
-        stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
-        (checksumpq, checksumd) = session.execute(stmt).one()
-        pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]],
-                     stdin=None, stdout=PIPE)
-        checksum0 = pro1.communicate()[0].decode().strip()
-        checksum0 = checksum0.rstrip('0')
-        # logging.info('checksum0 = {0}'.format(checksum0))
-        [symbol] = session.execute('select symbol from issuer0 \
-        where pq = %s limit 1', [pq]).one()
-        # logging.info('symbol = {0}, pq = {1}'.format(symbol, pq))
-        [step1path] = session.execute('select step1repo from runtime \
-        where id = 0 limit 1').one()
-        if not step1path:
-            logging.error('step1path can not be None')
-            return
-        step1path = '{0}/{1}'.format(step1path, super().path(symbol))
-        # logging.info('step1path = {0}'.format(step1path))
-        pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol),
-                      prop, checksum0], stdin=None, stdout=PIPE)
-        verdict = pro3.communicate()[0].decode().strip()
-        verdict = verdict.rstrip('0')
-        # logging.info('verdict = {0}'.format(verdict))
-        pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
-        note = pro2.communicate()[0].decode().strip()
-        note = note.rstrip('0')
-        if not note.startswith('5e5e'):
-            return
-        else:
-            rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
-        (left, right) = rawtext.split('->')
-        target = right[:-2]
-        (symbol, noteId, quantity) = left.split('||')
-        symbol = symbol[2:]
-        res = session.execute('select note_id from ownership0 \
-        where note_id = %s limit 1', [noteId]).one()
-        if res:
-            logging.error("the note {0} is already in place".format(noteId))
-            return
-        else:
-            self.save2ownershipcatalog(pq.strip(),
-                                       verdict.strip(),
-                                       prop.strip(),
-                                       rawtext.strip(),
-                                       symbol.strip(),
-                                       noteId.strip(),
-                                       quantity.strip(),
-                                       target.strip())
-            txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
-            # logging.info(txnTxt)
-            super().postTxn(txnTxt)
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
+        try:
+            (pq, prop) = proposal.split('@@')
+            if not pq or not prop:
+                logging.error('pq or prop can not be None')
+                return
+            pq = pq.strip()
+            prop = prop.strip()
+            stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
+            (checksumpq, checksumd) = session.execute(stmt).one()
+            pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]],
+                         stdin=None, stdout=PIPE)
+            checksum0 = pro1.communicate()[0].decode().strip()
+            checksum0 = checksum0.rstrip('0')
+            logging.debug('checksum0 = {0}'.format(checksum0))
+            [symbol] = session.execute('select symbol from issuer0 \
+where pq = %s limit 1', [pq]).one()
+            if not symbol:
+                logging.error('no symbol for pq:{0}'.format(pq))
+                return ;
+            logging.debug('symbol = {0}, pq = {1}'.format(symbol, pq))
+            [step1path] = session.execute('select step1repo from runtime \
+where id = 0 limit 1').one()
+            if not step1path:
+                logging.error('step1path can not be None')
+                return
+            step1path = '{0}/{1}'.format(step1path, super().path(symbol))
+            logging.debug('step1path = {0}'.format(step1path))
+            pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol),
+                          prop, checksum0], stdin=None, stdout=PIPE)
+            verdict = pro3.communicate()[0].decode().strip()
+            verdict = verdict.rstrip('0')
+            logging.debug('verdict = {0}'.format(verdict))
+            pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
+            note = pro2.communicate()[0].decode().strip()
+            note = note.rstrip('0')
+            if not note.startswith('5e5e'):
+                return
+            else:
+                rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
+            (left, right) = rawtext.split('->')
+            target = right[:-2]
+            (symbol, noteId, quantity) = left.split('||')
+            symbol = symbol[2:]
+            res = session.execute('select note_id from ownership0 \
+where note_id = %s limit 1', [noteId]).one()
+            if res:
+                logging.error("the note {0} is already in place".format(noteId))
+                return
+            else:
+                self.save2ownershipcatalog(pq.strip(),
+                                           verdict.strip(),
+                                           prop.strip(),
+                                           rawtext.strip(),
+                                           symbol.strip(),
+                                           noteId.strip(),
+                                           quantity.strip(),
+                                           target.strip())
+                txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
+                logging.debug(txnTxt)
+                super().postTxn(txnTxt)
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
+
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
