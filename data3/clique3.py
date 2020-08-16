@@ -306,62 +306,74 @@ class TransferHandler(HandleBase):
     def processProposal(self, proposal):
         logging.info(proposal)
         cluster, session, kafkaHost, zk = super().setup()
-        (pq, prop) = proposal.split('@@')
-        pq = pq.strip()
-        prop = prop.strip()
-        stmt = 'select checksumpq, checksumd from runtime where id = 0 limit 1'
-        (checksumpq, checksumd) = session.execute(stmt).one()
-        pro1 = Popen(['./step1', checksumpq, checksumd, proposal[-16:]],
-                     stdin=None, stdout=PIPE)
-        checksum0 = pro1.communicate()[0].decode().strip()
-        checksum0 = checksum0.rstrip('0')
-        [alias] = session.execute("""
-        select alias from player0 where pq = %s
-        """, [pq]).one()
-        alias = alias.strip()
-        logging.info(alias)
-        if not alias:
-            logging.error('alias can not be None')
-            return
-        [step1path] = session.execute("""
-        select step1repo from runtime where id = 0 limit 1
-        """).one()
-        logging.info(step1path)
-        if not step1path:
-            logging.error('step1path can not be None')
-            return
-        step1path = '{0}/{1}'.format(step1path, super().path(alias))
-        pro1 = Popen(['{0}/step1{1}'.format(step1path, alias),
-                      prop, checksum0], stdin=None, stdout=PIPE)
-        verdict = pro1.communicate()[0].decode().strip()
-        verdict = verdict.rstrip('0')
-
-        pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
-        note = pro2.communicate()[0].decode().strip()
-        note = note.strip()
-        note = note.rstrip('0')
-        logging.info(note)
-        if not note.startswith('5e5e'):
-            logging.error('invalid msg: {0}'.format(note))
-            return
-        rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
-        # logging.info('rawtext = {0}'.format(rawtext))
-        (left, right) = rawtext.split('->')
-        (target, lastsig, lastblock) = right.split('@@')
-        # lastsig = lastsig[:-2]
-        (symbol, noteId, quantity) = left.split('||')
-        symbol = symbol.split('::')[1]
-        logging.info('pq = {0}, symbol= {1}, noteId = {2}, quantity = {3}, \
-        lastsig = {4}'.format(pq, symbol, noteId, quantity, lastsig))
-        if self.verify(pq, symbol, noteId, quantity, lastsig):
-            self.save2ownershipcatalog(pq, verdict, prop,
-                                       rawtext, symbol, noteId,
-                                       quantity, target, lastsig)
-            txnTxt = '{0}||{1}||{2}||{3}'.format(pq, prop, verdict, '30001')
-            super().postTxn(txnTxt)
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
+        try:
+            (pq, prop) = proposal.split('@@')
+            pq = pq.strip()
+            prop = prop.strip()
+            stmt = """select checksumpq, checksumd from runtime
+            where id = 0 limit 1"""
+            (checksumpq, checksumd) = session.execute(stmt).one()
+            pro1 = Popen(['./step1', checksumpq, checksumd, proposal[-16:]],
+                         stdin=None, stdout=PIPE)
+            checksum0 = pro1.communicate()[0].decode().strip()
+            checksum0 = checksum0.rstrip('0')
+            [alias] = session.execute("""
+            select alias from player0 where pq = %s
+            """, [pq]).one()
+            alias = alias.strip()
+            logging.info(alias)
+            if not alias:
+                logging.error('alias can not be None')
+                return
+            [step1path] = session.execute("""
+            select step1repo from runtime where id = 0 limit 1
+            """).one()
+            logging.info(step1path)
+            if not step1path:
+                logging.error('step1path can not be None')
+                return
+            step1path = '{0}/{1}'.format(step1path, super().path(alias))
+            pro1 = Popen(['{0}/step1{1}'.format(step1path, alias),
+                          prop, checksum0], stdin=None, stdout=PIPE)
+            verdict = pro1.communicate()[0].decode().strip()
+            verdict = verdict.rstrip('0')
+            pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
+            note = pro2.communicate()[0].decode().strip()
+            note = note.strip()
+            note = note.rstrip('0')
+            logging.info(note)
+            if not note.startswith('5e5e'):
+                logging.error('invalid msg: {0}'.format(note))
+                return
+            rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
+            logging.debug('rawtext = {0}'.format(rawtext))
+            (left, right) = rawtext.split('->')
+            (target, lastsig, lastblock) = right.split('@@')
+            (symbol, noteId, quantity) = left.split('||')
+            symbol = symbol.split('::')[1]
+            logging.info("pq = {0}, symbol= {1}, noteId = {2}, quantity = {3}, \
+            lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
+            if self.verify(pq, symbol, noteId, quantity, lastsig):
+                self.save2ownershipcatalog(pq,
+                                           verdict,
+                                           prop,
+                                           rawtext,
+                                           symbol,
+                                           noteId,
+                                           quantity,
+                                           target,
+                                           lastsig)
+                txnTxt = '{0}||{1}||{2}||{3}'.format(pq,
+                                                     prop,
+                                                     verdict,
+                                                     '30001')
+                super().postTxn(txnTxt)
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
