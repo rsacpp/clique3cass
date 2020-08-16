@@ -1,4 +1,4 @@
-
+#!/usr/bin/perl
 my $userid = $ARGV[0];
 my $symbol = $ARGV[1];
 my $globalId = $ARGV[2];
@@ -29,12 +29,12 @@ perl -p -i.t -e 's/KEY/\Q$txt\E/mg' issuer3$symbol.cpp
 system($cmd);
 
 $cmd = qq{
-perl -p -i.t -e 's/SYMBOL/\Q$symbolCode\E/mg' issuer3$symbol.cpp
+perl -p -i.t -e 's/SYMBOL/\Q$symbol\E/mg' issuer3$symbol.cpp
 };
 system($cmd);
 
 $cmd = qq{
-perl -p -i.t -e 's/ALIAS/\Q$userCode\E/mg' issuer3$symbol.cpp
+perl -p -i.t -e 's/ALIAS/\Q$userid\E/mg' issuer3$symbol.cpp
 };
 system($cmd);
 

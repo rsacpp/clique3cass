@@ -1,4 +1,4 @@
-
+#!/usr/bin/perl
 my $userid = $ARGV[0];
 my $globalId = $ARGV[1];
 
