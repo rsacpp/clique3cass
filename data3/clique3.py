@@ -237,8 +237,8 @@ class IssueHandler(HandleBase):
             target = right[:-2]
             (symbol, noteId, quantity) = left.split('||')
             symbol = symbol[2:]
-            res = session.execute('select note_id from ownership0 \
-where note_id = %s limit 1', [noteId]).one()
+            res = session.execute("""select note_id from ownership0
+            where note_id = %s limit 1""", [noteId]).one()
             if res:
                 logging.error("the note {0} is already there".format(noteId))
                 return
