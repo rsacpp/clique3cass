@@ -1,5 +1,9 @@
 --reset 
-truncate table player0; truncate table issuer0; truncate table ownership0; truncate table note_catalog0; truncate table executions;
+truncate table clique3.player0;
+truncate table clique3.issuer0;
+truncate table clique3.ownership0;
+truncate table clique3.note_catalog0;
+truncate table clique3.executions;
 
 --MOUNT filer
 sudo yum -y install amazon-efs-utils

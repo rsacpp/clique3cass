@@ -206,5 +206,5 @@ if __name__ == '__main__':
         p21822 = Process(target=issue.serve_forever)
         p21822.start()
     with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
-        p21823 = Process(target=alias.server_forever)
+        p21823 = Process(target=alias.serve_forever)
         p21823.start()
