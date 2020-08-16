@@ -1,45 +1,9 @@
-#!/usr/bin/perl
-# 
-# makeissuer.pl for Clique3
-# Copyright (C) 2018, Gu Jun
-# 
-# This file is part of Clique3.
-# Clique3 is  free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or (at
-# your option) any later version.
-
-# Clique3 is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with Clique3. If not, see <http://www.gnu.org/licenses/>.
-
-sub convert{
-    my @tmp;
-    my $str = $_[0];
-    $i = 0;
-    for(; $i < length($str); $i++){
-        $ch = substr($str,$i, 1);
-        $o = ord($ch);
-        $j = 0;
-        for(; $j < 2; $j++){
-            $c =  sprintf("%x",($o>>(4*$j))&0xf);
-	    push @tmp, $c;
-        }
-    }
-    return join '', @tmp;
-}
 
 my $userid = $ARGV[0];
 my $symbol = $ARGV[1];
 my $globalId = $ARGV[2];
 
-#my $userCode = &convert($userid);
 my $userCode = unpack("H*", $userid);
-#my $symbolCode = &convert($symbol);
 my $symbolCode = unpack("H*", $symbol);
 
 print "userid = $userid\nuserCode = $userCode\nsymbol = $symbol\nsymbolCode = $symbolCode\n";
@@ -51,6 +15,31 @@ chomp($txt);
 print "txt = $txt\n";
 my $cmd = qq{
 cp issuertemp.cpp issuer$symbol.cpp
+};
+system($cmd);
+
+#standalone part
+$cmd = qq{cp issuertemp3.cpp issuer3$symbol.cpp
+};
+system($cmd);
+
+$cmd = qq{
+perl -p -i.t -e 's/KEY/\Q$txt\E/mg' issuer3$symbol.cpp
+};
+system($cmd);
+
+$cmd = qq{
+perl -p -i.t -e 's/SYMBOL/\Q$symbolCode\E/mg' issuer3$symbol.cpp
+};
+system($cmd);
+
+$cmd = qq{
+perl -p -i.t -e 's/ALIAS/\Q$userCode\E/mg' issuer3$symbol.cpp
+};
+system($cmd);
+
+$cmd = qq{
+g++ bn40.cpp issuer3$symbol.cpp -lboost_system -lpthread -o issuer3$symbol
 };
 system($cmd);
 

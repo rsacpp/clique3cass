@@ -1,21 +1,3 @@
-#!/usr/bin/perl
-# 
-# makepayer.pl for Clique3
-# Copyright (C) 2018, Gu Jun
-# 
-# This file is part of Clique3.
-# Clique3 is  free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or (at
-# your option) any later version.
-
-# Clique3 is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with Clique3. If not, see <http://www.gnu.org/licenses/>.
 
 my $userid = $ARGV[0];
 my $globalId = $ARGV[1];
@@ -26,16 +8,28 @@ open JG, "< jg.key" or die "can't open jg.key\n";
 $txt = join '', <JG> ;
 chomp($txt);
 
-#print "txt = $txt\n";
 my $cmd = qq{
 cp payertemp.cpp payer$userid.cpp
 };
 system($cmd);
 $cmd = qq{ perl -p -i.t -e 's/KEY/\Q$txt\E/mg' payer$userid.cpp
 };
-
 system($cmd);
+
 $cmd = qq/g++ bn40.cpp payer$userid.cpp -o payer$userid/;
+system($cmd);
+
+$cmd = qq{cp payertemp3.cpp payer3$userid.cpp};
+system($cmd);
+
+$cmd = qq{
+perl -p -i.t -e 's/KEY/\Q$txt\E/mg' payer3$userid.cpp
+};
+system($cmd);
+
+$cmd = qq{
+g++ bn40.cpp payer3$userid.cpp -lboost_system -lpthread -o payer3$userid
+};
 system($cmd);
 
 # make the step1v2
