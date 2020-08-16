@@ -166,6 +166,18 @@ class TransferHandler(Handler0):
 
 
 if __name__ == '__main__':
+    import signal
+    signal.signal(signal.SIGINT, handle_exit)
+    signal.signal(signal.SIGTERM, handle_exit)
+    pid = os.fork()
+    if pid > 0:
+        time.sleep(3)
+        sys.exit(0)
+    os.setsid()
+    sys.stdin.close()
+    freopen('./stdoutclique0', 'a', sys.stdout)
+    freopen('./stderrclique0', 'a', sys.stderr)
+
     fmt0 = "%(name)s %(levelname)s %(asctime)-15s %(process)d \
 %(thread)d %(pathname)s:%(lineno)s %(message)s"
     logging.basicConfig(format=fmt0,
@@ -178,6 +190,6 @@ if __name__ == '__main__':
     with socketserver.TCPServer((argv[1], 21822), IssueHandler) as issue:
         p21822 = Process(target=issue.serve_forever)
         p21822.start()
-    # with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
-    #     p21823 = Process(target=alias.server_forever)
-    #     p21823.start()
+    with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
+         p21823 = Process(target=alias.server_forever)
+         p21823.start()
