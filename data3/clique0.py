@@ -91,8 +91,8 @@ where port = 21822').one()
                 return
             payload = payload[2:-2]
             pq0, quantity0 = payload.split('||')
-            if not pq:
-                logging.info('pq can not be empty')
+            if not pq0:
+                logging.info('pq0 can not be empty')
                 return
             if not quantity0 or quantity0 not in ['8', '2', '1']:
                 logging.info('quantity is not valid: {0}'.format(quantity0))
