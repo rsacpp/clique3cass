@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import time
 import sys
 import hashlib
@@ -347,6 +348,11 @@ class TransferHandler(HandleBase):
                 return
             rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
             logging.debug('rawtext = {0}'.format(rawtext))
+            regexp0 = r'\w+&&\w+\|\|\w+\|\|\d-\>\w+&&\w+&&000&&\w+'
+            m = re.match(regexp0, rawtext)
+            if not m:
+                logging.error('rawtext is not in good format')
+                return
             (left, right) = rawtext.split('->')
             (target, lastsig, lastblock) = right.split('@@')
             (symbol, noteId, quantity) = left.split('||')
