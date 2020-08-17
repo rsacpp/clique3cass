@@ -59,6 +59,16 @@ string* digest(string* input){
 int
 main(int argc, char* argv[]){
     try{
+      string quantity = string(argv[2]);
+      string v1 = string("1");
+      string v2 = string("2");
+      string v8 = string("8");
+      if(quantity.compare(v1) !=0 &&
+	 quantity.compare(v2) !=0 &&
+	 quantity.compare(v8) !=0 ){
+	std::cout<<"quantity should be 1,2 or 8"<<std::endl;
+	return 0;
+      }
       using boost::asio::ip::tcp;
       boost::asio::io_service io_service;
       tcp::resolver resolver(io_service);
