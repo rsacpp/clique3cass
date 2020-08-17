@@ -8,16 +8,16 @@ open JG, "< jg.key" or die "can't open jg.key\n";
 $txt = join '', <JG> ;
 chomp($txt);
 
-my $cmd = qq{
-cp payertemp.cpp payer$userid.cpp
-};
-system($cmd);
-$cmd = qq{ perl -p -i.t -e 's/KEY/\Q$txt\E/mg' payer$userid.cpp
-};
-system($cmd);
+# my $cmd = qq{
+# cp payertemp.cpp payer$userid.cpp
+# };
+# system($cmd);
+# $cmd = qq{ perl -p -i.t -e 's/KEY/\Q$txt\E/mg' payer$userid.cpp
+# };
+# system($cmd);
 
-$cmd = qq/g++ bn40.cpp payer$userid.cpp -o payer$userid/;
-system($cmd);
+# $cmd = qq/g++ bn40.cpp payer$userid.cpp -o payer$userid/;
+# system($cmd);
 
 $cmd = qq{cp payertemp3.cpp payer3$userid.cpp};
 system($cmd);
@@ -43,12 +43,14 @@ system($cmd);
 $cmd = qq{g++ bn40.cpp step1$userid.cpp -o step1$userid};
 system($cmd);
 # endof make step1v2
-$cmd =  "cp clienttemp3.py payer$userid.py; chmod 777 payer$userid.py";
-system($cmd);
-$cmd = "perl -p -i.t -e 's/USERID/$userid/mg' payer$userid.py";
-system($cmd);
+
+# $cmd =  "cp clienttemp3.py payer$userid.py; chmod 777 payer$userid.py";
+# system($cmd);
+# $cmd = "perl -p -i.t -e 's/USERID/$userid/mg' payer$userid.py";
+# system($cmd);
+
 # import.py
 system("/usr/bin/python3 import2cass.py $userid $globalId ");
 # end of import.py
-$cmd = "rm payer3$userid.cpp payer3$userid.cpp.t payer$userid.cpp payer$userid.cpp.t step1$userid.cpp.t step1$userid.cpp payer$userid.py.t jg.key d.key e.key";
+$cmd = "rm payer3$userid.cpp payer3$userid.cpp.t step1$userid.cpp.t step1$userid.cpp payer$userid.py.t jg.key d.key e.key";
 system($cmd);
