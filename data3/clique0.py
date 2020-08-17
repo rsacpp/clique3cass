@@ -38,45 +38,45 @@ class Handler0(socketserver.BaseRequestHandler):
         return kafkaProducer
 
 
-class AliasHandler(Handler0):
-    # will recv request on user creation
-    def handle(self):
-        session, cluster = self.setupCass()
-        kafkaProducer = self.setupKafka()
-        try:
-            r0 = session.execute('select pq, e from clique3.channel \
-where port = 21823').one()
-            if not r0:
-                logging.info('no pq, e information, exit')
-                return
-            pq, e = r0.pq, r0.e
-            logging.debug("pq = {}, e= {}".format(pq, e))
-            count = str(self.request.recv(8).strip(), 'utf-8')
-            if not count or not int(count):
-                logging.info('got None payload')
-                return
-            payload = str(self.request.recv(int(count)).strip(), 'utf-8')
-            logging.debug(payload)
-            if not payload:
-                logging.info('got None payload')
-            args = './crypt', pq, e, payload
-            with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
-                output = p.stdout.read()
-                output = output.rstrip('0')
-            rawCode = binascii.a2b_hex(output)
-            logging.debug(output)
-            logging.debug(rawCode)
-            if not rawCode[:2] == '^^' or not rawCode[-2:] == '$$':
-                logging.info('rawCode format wrong, will ignore')
-                return
-            # put the rawCode to kafka
-            kafkaProducer.send('alias3', key=uuid.uuid4().bytes,
-                               value=bytes(rawCode[2:-2], 'utf-8'))
-        except Exception as err:
-            logging.error(err)
-        finally:
-            cluster.shutdown()
-            kafkaProducer.close()
+# class AliasHandler(Handler0):
+#     # will recv request on user creation
+#     def handle(self):
+#         session, cluster = self.setupCass()
+#         kafkaProducer = self.setupKafka()
+#         try:
+#             r0 = session.execute('select pq, e from clique3.channel \
+# where port = 21823').one()
+#             if not r0:
+#                 logging.info('no pq, e information, exit')
+#                 return
+#             pq, e = r0.pq, r0.e
+#             logging.debug("pq = {}, e= {}".format(pq, e))
+#             count = str(self.request.recv(8).strip(), 'utf-8')
+#             if not count or not int(count):
+#                 logging.info('got None payload')
+#                 return
+#             payload = str(self.request.recv(int(count)).strip(), 'utf-8')
+#             logging.debug(payload)
+#             if not payload:
+#                 logging.info('got None payload')
+#             args = './crypt', pq, e, payload
+#             with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
+#                 output = p.stdout.read()
+#                 output = output.rstrip('0')
+#             rawCode = binascii.a2b_hex(output)
+#             logging.debug(output)
+#             logging.debug(rawCode)
+#             if not rawCode[:2] == '^^' or not rawCode[-2:] == '$$':
+#                 logging.info('rawCode format wrong, will ignore')
+#                 return
+#             # put the rawCode to kafka
+#             kafkaProducer.send('alias3', key=uuid.uuid4().bytes,
+#                                value=bytes(rawCode[2:-2], 'utf-8'))
+#         except Exception as err:
+#             logging.error(err)
+#         finally:
+#             cluster.shutdown()
+#             kafkaProducer.close()
 
 
 class IssueHandler(Handler0):
@@ -205,6 +205,6 @@ if __name__ == '__main__':
     with socketserver.TCPServer((argv[1], 21822), IssueHandler) as issue:
         p21822 = Process(target=issue.serve_forever)
         p21822.start()
-    with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
-        p21823 = Process(target=alias.serve_forever)
-        p21823.start()
+    # with socketserver.TCPServer((argv[1], 21823), AliasHandler) as alias:
+    #     p21823 = Process(target=alias.serve_forever)
+    #     p21823.start()
