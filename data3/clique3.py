@@ -348,7 +348,7 @@ class TransferHandler(HandleBase):
                 return
             rawtext = str(binascii.a2b_hex(bytes(note, 'utf-8')), 'utf-8')
             logging.debug('rawtext = {0}'.format(rawtext))
-            regexp0 = r'\w+&&\w+\|\|\w+\|\|\d-\>\w+&&\w+&&000&&\w+'
+            regexp0 = r'\^\^\w+::\w+\|\|\w+\|\|\d-\>\w+@@\w+@@000\$\$'
             m = re.match(regexp0, rawtext)
             if not m:
                 logging.error('rawtext is not in good format')
@@ -470,28 +470,31 @@ class TransferProposalHandler(HandleBase):
         return 'transfer0'
 
     def processProposal(self, payload):
-        cluster, session, kafkaHost, zk = super().setup()
-        stmt = """
-        select playerrepo from runtime where id=0
-        """
-        [folder] = session.execute(stmt).one()
-        (alias, rawCode, lastTxn, lastBlock, globalId) = payload.split('&&')
-        # logging.info([alias, rawCode, lastTxn, lastBlock, globalId])
-        # pro3 = Popen(['/usr/bin/python3',
-        #               '/{0}/{1}/payer{2}.py'.format(
-        #                   folder, super().path(alias), alias),
-        #               rawCode, lastTxn, globalId, lastBlock],
-        #              stdin=None, stdout=None)
-        raw = "^^{0}::{1}@@{2}@@{3}$$".format(
-            alias, rawCode, lastTxn, lastBlock)
-        logging.info(raw)
-        pro3 = Popen(['/{0}/{1}/payer3{2}'.format(
-            folder, super().path(alias), alias),
-                      'localhost', raw], stdin=None, stdout=None)
-        pro3.wait()
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
+        try:
+            cluster, session, kafkaHost, zk = super().setup()
+            stmt = """
+            select playerrepo from runtime where id=0
+            """
+            [folder] = session.execute(stmt).one()
+            regexp0 = r'\w+&&\w+\|\|\w+\|\|\d-\>\w+&&\w+&&000&&\w+'
+            m = re.match(regexp0, payload)
+            if not m:
+                logging.error('payload is not in good format')
+                return
+            alias, rawCode, lastTxn, lastBlock, globalId = payload.split('&&')
+            raw = "^^{0}::{1}@@{2}@@{3}$$".format(
+                alias, rawCode, lastTxn, lastBlock)
+            logging.info(raw)
+            pro3 = Popen(['/{0}/{1}/payer3{2}'.format(
+                folder, super().path(alias), alias),
+                          'localhost', raw], stdin=None, stdout=None)
+            pro3.wait()
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
 
 
 if __name__ == '__main__':
