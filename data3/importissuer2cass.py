@@ -41,24 +41,26 @@ print("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
 
 cluster = Cluster(['localhost'])
 session = cluster.connect('clique3')
-stmt = """
-insert into issuer0(id, clique, global_id, pq, d, alias, symbol, hash_code, setup)
-values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()))
-"""
-session.execute(stmt, [int(entryId), globalId, pq, '', alias, symbol, hashCode])
 
 stmt = """
 select playerrepo, step1repo from runtime where id=0
 """
 (playerrepo, step1repo) = session.execute(stmt).one()
-path = util.path(symbol)
-playerrepo = '{0}/{1}/'.format(playerrepo, path)
-step1repo = '{0}/{1}/'.format(step1repo, path)
-# mv the player file and step1 file to the target place
-# read the playerepo variable from db
-os.popen('mkdir -p {0};mkdir -p {1}'.format(playerrepo, step1repo))
+# a random folder
+folder = '{0:02x}'.format(random.randint(0,255))
+
+playerrepo = '{0}/{1}/'.format(playerrepo, folder)
+step1repo = '{0}/{1}/'.format(step1repo, folder)
+
+
+stmt = """
+insert into issuer0(id, clique, global_id, pq, d, alias, symbol, hash_code, setup, repo, step1repo)
+values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
+"""
+session.execute(stmt, [int(entryId), globalId, pq, '', alias, symbol, hashCode,
+                       '{0}/issuer3{1}'.format(playerrepo, symbol),
+                       '{0}/step1{1}'.format(step1repo, symbol)])
+
 print("playerepo = {0}, step1repo = {1}".format(playerrepo, step1repo))
-# os.popen("mv issuer{0}.py {1}".format(symbol, playerrepo))
-# os.popen("mv issuer{0}    {1}".format(symbol, playerrepo))
 os.popen("mv issuer3{0} {1}".format(symbol, playerrepo))
 os.popen("mv step1{0}    {1}".format(symbol, step1repo))
