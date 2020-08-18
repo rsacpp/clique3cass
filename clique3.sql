@@ -25,7 +25,7 @@ alias text,
 setup timestamp,
 hash_code text,
 repo text,
-step1repo text
+step1repo text,
 primary key(id)
 );
 create index player0_pq on player0(pq);
