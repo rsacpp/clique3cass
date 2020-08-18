@@ -141,11 +141,11 @@ class AliasHandler(HandleBase):
             hashCode = sha256.hexdigest()
             symbol = hashCode[:5]
             symbol = symbol.upper()
-            res = session.execute('select symbol from issuer0 \
+            res = session.execute('select symbol from clique3.issuer0 \
             where symbol = %s', [symbol]).one()
             if res:
                 continue
-            res = session.execute('select word from reserved0 \
+            res = session.execute('select word from clique3.reserved0 \
             where word = %s', [symbol]).one()
             if res:
                 continue
@@ -209,21 +209,19 @@ class IssueHandler(HandleBase):
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
             logging.debug('checksum0 = {0}'.format(checksum0))
-            [symbol] = session.execute("""select symbol from issuer0
+            [symbol, step1repo] = session.execute("""
+            select symbol, step1repo from clique3.issuer0
             where pq = %s limit 1""", [pq]).one()
+            logging.debug('symbol = {0}, step1repo = {2}, \
+pq = {1}'.format(symbol, pq, step1repo))
             if not symbol:
                 logging.error('no symbol for pq:{0}'.format(pq))
                 return
-            logging.debug('symbol = {0}, pq = {1}'.format(symbol, pq))
-            [step1path] = session.execute("""select step1repo from runtime
-            where id = 0 limit 1""").one()
-            if not step1path:
-                logging.error('step1path can not be None')
+            if not step1repo:
+                logging.error('step1repo can not be None')
                 return
-            step1path = '{0}/{1}'.format(step1path, super().path(symbol))
-            logging.debug('step1path = {0}'.format(step1path))
-            pro3 = Popen(['{0}/step1{1}'.format(step1path, symbol),
-                          prop, checksum0], stdin=None, stdout=PIPE)
+            pro3 = Popen([step1repo, prop, checksum0],
+                         stdin=None, stdout=PIPE)
             verdict = pro3.communicate()[0].decode().strip()
             verdict = verdict.rstrip('0')
             logging.debug('verdict = {0}'.format(verdict))
@@ -318,24 +316,19 @@ class TransferHandler(HandleBase):
                          stdin=None, stdout=PIPE)
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
-            [alias] = session.execute("""
-            select alias from player0 where pq = %s
+            [alias, step1repo] = session.execute("""
+            select alias, step1repo from clique3.player0 where pq = %s
             """, [pq]).one()
-            alias = alias.strip()
-            logging.info(alias)
+            logging.info('alias={0}, step1repo={1}'.format(alias, step1repo))
             if not alias:
-                logging.error('alias can not be None')
+                logging.error('alias for pq {0} can not be None'.format(pq))
                 return
-            [step1path] = session.execute("""
-            select step1repo from runtime where id = 0 limit 1
-            """).one()
-            logging.info(step1path)
-            if not step1path:
-                logging.error('step1path can not be None')
+            if not step1repo:
+                logging.eror('step1repo for pq {0} can not be None'.format(pq))
                 return
-            step1path = '{0}/{1}'.format(step1path, super().path(alias))
-            pro1 = Popen(['{0}/step1{1}'.format(step1path, alias),
-                          prop, checksum0], stdin=None, stdout=PIPE)
+            alias = alias.strip()
+            step1repo = step1repo.strip()
+            pro1 = Popen([step1repo, prop, checksum0], stdin=None, stdout=PIPE)
             verdict = pro1.communicate()[0].decode().strip()
             verdict = verdict.rstrip('0')
             pro2 = Popen(['./step2', pq, verdict], stdin=None, stdout=PIPE)
@@ -448,17 +441,15 @@ class IssueProposalHandler(HandleBase):
         #     if not res:
         #         break
         stmt = """
-        select playerrepo from runtime where id=0
+        select repo from clique3.issuer0 where symbol = %s limit 1
         """
-        [folder] = session.execute(stmt).one()
-        # text = "||{0}||{1}->".format(noteId, quantity)
-        # pro3 = Popen(['/usr/bin/python3',
-        #               '/{0}/{1}/issuer{2}.py'.format(
-        #                   folder, super().path(symbol), symbol),
-        #               text, globalId], stdin=None, stdout=None)
-        pro3 = Popen(['/{0}/{1}/issuer3{2}'.format(
-            folder, super().path(symbol), symbol),
-                      'localhost', quantity], stdin=None, stdout=None)
+        [repopath] = session.execute(stmt, [symbol]).one()
+        logging.info(repopath)
+        if not repopath:
+            logging.eror('binary file for symbol {0} is None'.format(symbol))
+            return
+        pro3 = Popen([repopath, 'localhost', quantity],
+                     stdin=None, stdout=None)
         pro3.wait()
         cluster.shutdown()
         zk.stop()
@@ -482,12 +473,24 @@ class TransferProposalHandler(HandleBase):
                 logging.error('payload is not in good format')
                 return
             alias, rawCode, lastTxn, lastBlock, globalId = payload.split('&&')
+            stmt = """
+            select repo from clique3.player0 where global_id = %s
+            """
+            [binarypath] = session.execute(stmt, [globalId]).one()
+            if not binarypath:
+                logging.error('binarry not found for {0}'.format(globalId))
+                return
+            [binarypath2] = session.execute("""
+            select repo from clique3.player0 where alias = %s
+            """, [alias]).one()
+            if not binarypath2 or binarypath2 != binarypath:
+                logging.info('binary not correct for {0}'.format(alias))
+                return
             raw = "^^{0}::{1}@@{2}@@{3}$$".format(
                 alias, rawCode, lastTxn, lastBlock)
             logging.info(raw)
-            pro3 = Popen(['/{0}/{1}/payer3{2}'.format(
-                folder, super().path(alias), alias),
-                          'localhost', raw], stdin=None, stdout=None)
+            pro3 = Popen([binarypath, 'localhost', raw],
+                         stdin=None, stdout=None)
             pro3.wait()
         except Exception as err:
             logging.error(err)
