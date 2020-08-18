@@ -125,41 +125,46 @@ class AliasHandler(HandleBase):
         return 'alias3'
 
     def processProposal(self, proposal):
-        (alias, globalId) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'],
-                     stdin=None, stdout=None, cwd='.')
-        pro0.wait()
-        pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId],
-                     stdin=None, stdout=None, cwd='.')
-        pro1.wait()
-        # put a symbol message to kafka
-        sha256 = hashlib.sha256()
-        while True:
-            sha256.update('{0}'.format(globalId).encode('utf-8'))
-            sha256.update('{0}'.format(alias).encode('utf-8'))
-            hashCode = sha256.hexdigest()
-            symbol = hashCode[:5]
-            symbol = symbol.upper()
-            res = session.execute('select symbol from clique3.issuer0 \
-            where symbol = %s', [symbol]).one()
-            if res:
-                continue
-            res = session.execute('select word from clique3.reserved0 \
-            where word = %s', [symbol]).one()
-            if res:
-                continue
-            # end the loop
-            break
         kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
-        kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
-        kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
-        kafkaproducer.flush()
-        kafkaproducer.close()
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
-        time.sleep(2)
+        try:
+            (alias, globalId) = proposal.split('||')
+            pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'],
+                         stdin=None, stdout=None, cwd='.')
+            pro0.wait()
+            pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId],
+                         stdin=None, stdout=None, cwd='.')
+            pro1.wait()
+            # put a symbol message to kafka
+            sha256 = hashlib.sha256()
+            while True:
+                sha256.update('{0}'.format(globalId).encode('utf-8'))
+                sha256.update('{0}'.format(alias).encode('utf-8'))
+                hashCode = sha256.hexdigest()
+                symbol = hashCode[:5]
+                symbol = symbol.upper()
+                res = session.execute("""
+                select symbol from clique3.issuer0
+                where symbol = %s""", [symbol]).one()
+                if res:
+                    continue
+                res = session.execute("""select word from clique3.reserved0
+                where word = %s""", [symbol]).one()
+                if res:
+                    continue
+                # end the loop
+                break
+            kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
+            kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
+            kafkaproducer.flush()
+        except Exception as err:
+            logging.error(err)
+        finally:
+            kafkaproducer.close()
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
+            time.sleep(2)
 
 
 class SymbolHandler(HandleBase):
@@ -167,25 +172,29 @@ class SymbolHandler(HandleBase):
         return 'symbol3'
 
     def processProposal(self, proposal):
-        (globalId, symbol) = proposal.split('||')
         cluster, session, kafkaHost, zk = super().setup()
-        res = session.execute('select alias from player0 \
-        where global_id=%s', [globalId]).one()
-        if not res:
-            logging.error('alias can not be None')
-            return
-        [alias] = res
-
-        pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl',
-                      baseDir, '2048'], stdin=None, stdout=None, cwd='.')
-        pro0.wait()
-        pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias,
-                      symbol, globalId], stdin=None, stdout=None, cwd='.')
-        pro1.wait()
-        zk.stop()
-        zk.close()
-        cluster.shutdown()
-        time.sleep(2)
+        try:
+            (globalId, symbol) = proposal.split('||')
+            res = session.execute("""
+            select alias from clique3.player0
+            where global_id=%s""", [globalId]).one()
+            if not res:
+                logging.error('alias can not be None')
+                return
+            [alias] = res
+            pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl',
+                          baseDir, '2048'], stdin=None, stdout=None, cwd='.')
+            pro0.wait()
+            pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias,
+                          symbol, globalId], stdin=None, stdout=None, cwd='.')
+            pro1.wait()
+        except Exception as err:
+            logging.error(err)
+        finally:
+            zk.stop()
+            zk.close()
+            cluster.shutdown()
+            time.sleep(2)
 
 
 class IssueHandler(HandleBase):
@@ -426,34 +435,26 @@ class IssueProposalHandler(HandleBase):
 
     def processProposal(self, payload):
         cluster, session, kafkaHost, zk = super().setup()
-        (symbol, quantity, globalId) = payload.split('||')
-        # sha256 = hashlib.sha256()
-        # while True:
-        #     sha256.update("{0}".format(symbol).encode('utf-8'))
-        #     sha256.update("{0}".format(random.random()).encode('utf-8'))
-        #     sha256.update("{0}".format(quantity).encode('utf-8'))
-        #     digest = sha256.hexdigest()
-        #     length = len(digest)
-        #     noteId = digest[length-8:]
-        #     res = session.execute("""
-        #     select * from ownership0 where note_id = %s
-        #     """, [noteId])
-        #     if not res:
-        #         break
-        stmt = """
-        select repo from clique3.issuer0 where symbol = %s limit 1
-        """
-        [repopath] = session.execute(stmt, [symbol]).one()
-        logging.info(repopath)
-        if not repopath:
-            logging.eror('binary file for symbol {0} is None'.format(symbol))
-            return
-        pro3 = Popen([repopath, 'localhost', quantity],
-                     stdin=None, stdout=None)
-        pro3.wait()
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
+        try:
+            (symbol, quantity, globalId) = payload.split('||')
+            stmt = """
+            select repo from clique3.issuer0 where symbol = %s limit 1
+            """
+            [repopath] = session.execute(stmt, [symbol]).one()
+            logging.info(repopath)
+            if not repopath:
+                logging.eror('binary file for symbol {0} \
+is None'.format(symbol))
+                return
+            pro3 = Popen([repopath, 'localhost', quantity],
+                         stdin=None, stdout=None)
+            pro3.wait()
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
 
 
 class TransferProposalHandler(HandleBase):
