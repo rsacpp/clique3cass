@@ -3,8 +3,7 @@ from kazoo.client import KazooClient
 from cassandra.cluster import Cluster
 import hashlib
 import sys
-sys.path.append('/the/path/of/util.py')
-import util
+import random
 import os
 
 zkHost = 'localhost:2181'
@@ -47,14 +46,14 @@ select playerrepo, step1repo from runtime where id=0
 """
 (playerrepo, step1repo) = session.execute(stmt).one()
 # a random folder
-folder = '{0:02x}'.format(random.randint(0,255))
+folder = '{0:02x}'.format(random.randint(0, 255))
 
 playerrepo = '{0}/{1}/'.format(playerrepo, folder)
 step1repo = '{0}/{1}/'.format(step1repo, folder)
 
-
 stmt = """
-insert into issuer0(id, clique, global_id, pq, d, alias, symbol, hash_code, setup, repo, step1repo)
+insert into issuer0(id, clique, global_id, pq, d, alias, symbol, hash_code,
+setup, repo, step1repo)
 values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
 """
 session.execute(stmt, [int(entryId), globalId, pq, '', alias, symbol, hashCode,

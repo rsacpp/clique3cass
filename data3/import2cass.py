@@ -1,12 +1,10 @@
 #!/usr/bin/python3
-
 from kazoo.client import KazooClient
 from cassandra.cluster import Cluster
 import hashlib
 import os
 import sys
-sys.path.append('./util.py')
-import util
+import random
 
 zkHost = 'localhost:2181'
 
@@ -46,21 +44,21 @@ select playerrepo, step1repo from runtime where id=0
 """
 (playerrepo, step1repo) = session.execute(stmt).one()
 # a random path
-path = '{0:02x}'.format(random.randint(0,255))
+path = '{0:02x}'.format(random.randint(0, 255))
 
 playerrepo = '{0}/{1}/'.format(playerrepo, path)
 step1repo = '{0}/{1}/'.format(step1repo, path)
 
 stmt = """
-insert into player0(id, clique, global_id, pq, d, alias, hash_code, setup, repo, step1repo)
+insert into player0(id, clique, global_id, pq, d, alias, hash_code,
+setup, repo, step1repo)
 values(%s, '3', %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
 """
 session.execute(stmt, [int(entryId), globalId, pq, '', alias, hashCode,
                        '{0}/payer3{1}'.format(playerrepo, alias),
-                       '{0}/step1{2}'.format(step1repo, alias)])
+                       '{0}/step1{1}'.format(step1repo, alias)])
 
 
-#os.popen('mkdir -p {0};mkdir -p {1}'.format(playerrepo, step1repo))
 print("playerepo = {0}, step1repo = {1}".format(playerrepo, step1repo))
 
 os.popen("mv payer3{0} {1}".format(alias, playerrepo))
