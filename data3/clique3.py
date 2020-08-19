@@ -206,6 +206,7 @@ class AliasHandler(HandleBase):
                 logging.debug(srcCode)
             args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
 '.format(playerfolder, alias).split(' ')
+            logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
             # repo key part
@@ -218,6 +219,7 @@ class AliasHandler(HandleBase):
                 logging.debug(srcCode)
             args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
 '.format(step1folder, alias).split(' ')
+            logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
             self.save2cass(alias, globalId, pqKey, playerfolder, step1folder)
