@@ -193,8 +193,8 @@ class AliasHandler(HandleBase):
                 pqKey = pqKey.strip()
                 dKey = dKey.strip()
                 jgKey = jgKey.strip()
-                logging.debug('pq = {0}, d = {1}, jg = {2}\
-'.format(pqKey, dKey, jgKey))
+                # logging.debug('pq = {0}, d = {1}, jg = {2}\
+# '.format(pqKey, # dKey, jgKey))
 
             # client key part
             args = 'cat bn40.cpp payertemp3.cpp'.split(' ')
@@ -203,7 +203,7 @@ class AliasHandler(HandleBase):
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('KEY',
                                           '{0}@@{1}'.format(pqKey, jgKey))
-                logging.debug(srcCode)
+                # logging.debug(srcCode)
             playerbinary = '{0}/payer3{1}'.format(playerfolder, alias)
             args = 'g++ -x c++ -lboost_system -lpthread -o {0} -\
 '.format(playerbinary).split(' ')
@@ -217,7 +217,7 @@ class AliasHandler(HandleBase):
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
-                logging.debug(srcCode)
+                # logging.debug(srcCode)
             step1binary = '{0}/step1{1}'.format(step1folder, alias)
             args = 'g++ -x c++ -o {0} -'.format(step1binary).split(' ')
             logging.debug(args)
@@ -332,8 +332,8 @@ class SymbolHandler(HandleBase):
                 pqKey = pqKey.strip()
                 dKey = dKey.strip()
                 jgKey = jgKey.strip()
-                logging.debug('pq = {0}, d = {1}, jg = {2}\
-'.format(pqKey, dKey, jgKey))
+                # logging.debug('pq = {0}, d = {1}, jg = {2}\
+# '.format(pqKey, dKey, jgKey))
 
             if not pqKey or not dKey or not jgKey:
                 logging.error('None of the 3 keys can be None')
@@ -349,7 +349,7 @@ class SymbolHandler(HandleBase):
                                           '{0}@@{1}'.format(pqKey, jgKey))
                 srcCode = srcCode.replace('SYMBOL', symbol)
                 srcCode = srcCode.replace('ALIAS', alias)
-                logging.debug(srcCode)
+                # logging.debug(srcCode)
             issuerbinary = '{0}/issuer3{1}'.format(playerfolder, symbol)
             args = 'g++ -x c++ -lboost_system -lpthread -o {0} -\
 '.format(issuerbinary).split(' ')
@@ -362,7 +362,7 @@ class SymbolHandler(HandleBase):
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
-                logging.debug(srcCode)
+                # logging.debug(srcCode)
             step1binary = '{0}/step1{1}'.format(step1folder, symbol)
             args = 'g++ -x c++ -o {0} -'.format(step1binary).split(' ')
             logging.debug(args)
