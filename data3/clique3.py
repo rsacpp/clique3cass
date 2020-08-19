@@ -59,6 +59,7 @@ class HandleBase:
         logging.info('queue Name: {0}'.format(queueName))
         kafka = KafkaConsumer(queueName,
                               group_id='clique3',
+                              enable_auto_commit=False,
                               bootstrap_servers=kafkaHost.split(','))
         executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
@@ -75,6 +76,7 @@ class HandleBase:
             """
             session.execute(stmt, [executionId, queueName, proposal])
             self.processProposal(proposal)
+            kafka.commit()
 
     def postTxn(self, txn):
         cluster, session, kafkaHost, zk = self.setup()
