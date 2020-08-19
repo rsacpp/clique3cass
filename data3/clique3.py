@@ -365,6 +365,7 @@ class SymbolHandler(HandleBase):
                 logging.debug(srcCode)
             step1binary = '{0}/step1{1}'.format(step1folder, symbol)
             args = 'g++ -x c++  -o {0} -'.format(step1binary).split(' ')
+            logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
             # save2cass
