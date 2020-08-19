@@ -185,7 +185,7 @@ class AliasHandler(HandleBase):
                 bns = []
                 for a in out1.split('INTEGER'):
                     bns0 = list(filter(bnfilter, a.splitlines()))
-                    bns.exend(bns0)
+                    bns.extend(bns0)
 
                 pqKey = ''.join(reversed(bns[1])).lower().replace(':', '')
                 dKey = ''.join(reversed(bns[3])).lower().replace(':', '')
@@ -322,7 +322,7 @@ class SymbolHandler(HandleBase):
 
                 for a in out1.split('INTEGER'):
                     bns0 = list(filter(bnfilter, a.splitlines()))
-                    bns.exend(bns0)
+                    bns.extend(bns0)
                 pqKey = ''.join(reversed(bns[1])).lower().replace(':', '')
                 dKey = ''.join(reversed(bns[3])).lower().replace(':', '')
                 jgKey = ''.join(reversed(bns[-1])).lower().replace(':', '')
