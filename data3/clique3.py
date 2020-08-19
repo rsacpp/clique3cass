@@ -197,7 +197,7 @@ class AliasHandler(HandleBase):
 '.format(pqKey, dKey, jgKey))
 
             # client key part
-            args = 'cat bn40.cpp playertemp3.cpp'.split(' ')
+            args = 'cat bn40.cpp payertemp3.cpp'.split(' ')
             with Popen(args, stdout=PIPE) as p:
                 srcCode = p.stdout.read()
                 srcCode = str(srcCode, 'utf-8')
