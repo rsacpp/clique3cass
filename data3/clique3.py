@@ -180,10 +180,13 @@ class AliasHandler(HandleBase):
             pqKey, dKey, jgKey = '', '', ''
             with Popen(args, stdin=PIPE, stdout=PIPE) as p:
                 out1, err1 = p.communicate(input=output0)
+                out1 = str(out1, 'utf-8')
+
                 bns = []
                 for a in out1.split('INTEGER'):
                     bns0 = list(filter(bnfilter, a.splitlines()))
                     bns.exend(bns0)
+
                 pqKey = ''.join(reversed(bns[1])).lower().replace(':', '')
                 dKey = ''.join(reversed(bns[3])).lower().replace(':', '')
                 jgKey = ''.join(reversed(bns[-1])).lower().replace(':', '')
@@ -311,6 +314,7 @@ class SymbolHandler(HandleBase):
             pqKey, dKey, jgKey = '', '', ''
             with Popen(args, stdin=PIPE, stdout=PIPE) as p:
                 out1, err1 = p.communicate(input=output0)
+                out1 = str(out1, 'utf-8')
                 bns = []
 
                 def bnfilter(x):
