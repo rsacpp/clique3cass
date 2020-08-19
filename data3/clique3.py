@@ -204,8 +204,9 @@ class AliasHandler(HandleBase):
                 srcCode = srcCode.replace('KEY',
                                           '{0}@@{1}'.format(pqKey, jgKey))
                 logging.debug(srcCode)
-            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
-'.format(playerfolder, alias).split(' ')
+            playerbinary = '{0}/payer3{1}'.format(playerfolder, alias)
+            args = 'g++ -x c++ -lboost_system -lpthread -o {0} -\
+'.format(playerbinary).split(' ')
             logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
@@ -217,12 +218,12 @@ class AliasHandler(HandleBase):
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
                 logging.debug(srcCode)
-            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
-'.format(step1folder, alias).split(' ')
+            step1binary = '{0}/step1{1}'.format(step1folder, alias)
+            args = 'g++ -x c++ -o {0} -'.format(step1binary).split(' ')
             logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
-            self.save2cass(alias, globalId, pqKey, playerfolder, step1folder)
+            self.save2cass(alias, globalId, pqKey, playerbinary, step1binary)
             # put a symbol message to kafka
             sha256 = hashlib.sha256()
             while True:
@@ -349,8 +350,9 @@ class SymbolHandler(HandleBase):
                 srcCode = srcCode.replace('SYMBOL', symbol)
                 srcCode = srcCode.replace('ALIAS', alias)
                 logging.debug(srcCode)
-            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
-'.format(playerfolder, symbol).split(' ')
+            issuerbinary = '{0}/issuer3{1}'.format(playerfolder, symbol)
+            args = 'g++ -x c++ -lboost_system -lpthread -o {0} -\
+'.format(issuerbinary).split(' ')
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
             # repo key part
@@ -361,13 +363,13 @@ class SymbolHandler(HandleBase):
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
                 logging.debug(srcCode)
-            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
-'.format(step1folder, symbol).split(' ')
+            step1binary = '{0}/step1{1}'.format(step1folder, symbol)
+            args = 'g++ -x c++  -o {0} -'.format(step1binary).split(' ')
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
             # save2cass
             self.save2cass(globalId, pqKey, alias,
-                           symbol, playerfolder, step1folder)
+                           symbol, issuerbinary, step1binary)
         except Exception as err:
             logging.error(err)
         finally:
