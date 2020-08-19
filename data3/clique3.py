@@ -3,6 +3,7 @@ import os
 import re
 import time
 import sys
+import random
 import hashlib
 import configparser
 import binascii
@@ -126,17 +127,97 @@ class AliasHandler(HandleBase):
     def queueName(self):
         return 'alias3'
 
+    def save2cass(self, alias, globalId, pq, repoPath, step1Path):
+        try:
+            cluster, session, kafkaHost, zk = super().setup()
+            zkc = zk.Counter("/aliasId3", default=0x700)
+            zkc += 1
+            entryId = zkc.value
+            sha256 = hashlib.sha256()
+            sha256.update('{0}'.format(alias).encode('utf-8'))
+            hashCode = sha256.hexdigest()
+            print("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
+            stmt = """
+            insert into clique3.player0(id, clique, global_id, pq, d,
+            alias, hash_code, setup, repo, step1repo)
+            values(%s, '3', %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
+            """
+            session.execute(stmt, [int(entryId), globalId, pq, '', alias,
+                                   hashCode, repoPath, step1Path])
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
+
     def processProposal(self, proposal):
         cluster, session, kafkaHost, zk = super().setup()
         kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
         try:
+            stmt = """
+            select playerrepo, step1repo from runtime where id=0
+            """
+            [playerrepo, step1repo] = session.execute(stmt).one()
+            if not playerrepo or not step1repo:
+                logging.error('nowhere to put the key, exit')
+                return
+            randomfolder = '{0:02x}'.format(random.randint(0, 255))
+            playerfolder = '{0}/{1}'.format(playerrepo, randomfolder)
+            randomfolder2 = '{0:02x}'.format(random.randint(0, 255))
+            step1folder = '{0}/{1}'.format(step1repo, randomfolder2)
+
             (alias, globalId) = proposal.split('||')
-            pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl', baseDir, '2048'],
-                         stdin=None, stdout=None, cwd='.')
-            pro0.wait()
-            pro1 = Popen(['/usr/bin/perl', 'makepayer.pl', alias, globalId],
-                         stdin=None, stdout=None, cwd='.')
-            pro1.wait()
+            args = '{0}/openssl-1.0.2o/apps/openssl genrsa {1}\
+'.format(baseDir, 2048).split(' ')
+            output0 = ''
+            with Popen(args, stdout=PIPE) as p:
+                output0 = p.stdout.read()
+            args = 'openssl asn1parse'.split(' ')
+
+            def bnfilter(x):
+                return x.startswith("           :")
+            pqKey, dKey, jgKey = '', '', ''
+            with Popen(args, stdin=PIPE, stdout=PIPE) as p:
+                out1, err1 = p.communicate(input=output0)
+                bns = []
+                for a in out1.split('INTEGER'):
+                    bns0 = list(filter(bnfilter, a.splitlines()))
+                    bns.exend(bns0)
+                pqKey = ''.join(reversed(bns[1])).lower().replace(':', '')
+                dKey = ''.join(reversed(bns[3])).lower().replace(':', '')
+                jgKey = ''.join(reversed(bns[-1])).lower().replace(':', '')
+                pqKey = pqKey.strip()
+                dKey = dKey.strip()
+                jgKey = jgKey.strip()
+                logging.debug('pq = {0}, d = {1}, jg = {2}\
+'.format(pqKey, dKey, jgKey))
+
+            # client key part
+            args = 'cat bn40.cpp playertemp3.cpp'.split(' ')
+            with Popen(args, stdout=PIPE) as p:
+                srcCode = p.stdout.read()
+                srcCode = str(srcCode, 'utf-8')
+                srcCode = srcCode.replace('KEY',
+                                          '{0}@@{1}'.format(pqKey, jgKey))
+                logging.debug(srcCode)
+            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
+'.format(playerfolder, alias).split(' ')
+            with Popen(args, stdin=PIPE, stdout=None) as p:
+                p.communicate(input=bytes(srcCode, 'utf-8'))
+            # repo key part
+            args = 'cat bn40.cpp step1v2.cpp'.split(' ')
+            with Popen(args, stdout=PIPE) as p:
+                srcCode = p.stdout.read()
+                srcCode = str(srcCode, 'utf-8')
+                srcCode = srcCode.replace('STEP1KEY',
+                                          '{0}@@{1}'.format(pqKey, dKey))
+                logging.debug(srcCode)
+            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
+'.format(step1folder, alias).split(' ')
+            with Popen(args, stdin=PIPE, stdout=None) as p:
+                p.communicate(input=bytes(srcCode, 'utf-8'))
+            self.save2cass(alias, globalId, pqKey, playerfolder, step1folder)
             # put a symbol message to kafka
             sha256 = hashlib.sha256()
             while True:
@@ -173,6 +254,30 @@ class SymbolHandler(HandleBase):
     def queueName(self):
         return 'symbol3'
 
+    def save2cass(self, globalId, pq, alias, symbol, playerPath, step1Path):
+        cluster, session, kafkaHost, zk = super().setup()
+        try:
+            zkc = zk.Counter("/issuerId3", default=0x700)
+            zkc += 1
+            entryId = zkc.value
+            sha256 = hashlib.sha256()
+            sha256.update('{0}'.format(symbol).encode('utf-8'))
+            hashCode = sha256.hexdigest()
+            print("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
+            stmt = """
+            insert into issuer0(id, clique, global_id, pq, d, alias,
+            symbol, hash_code, setup, repo, step1repo)
+            values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
+            """
+            session.execute(stmt, [int(entryId), globalId, pq, '', alias,
+                                   symbol, hashCode, playerPath, step1Path])
+        except Exception as err:
+            logging.error(err)
+        finally:
+            zk.stop()
+            zk.close()
+            cluster.shutdown()
+
     def processProposal(self, proposal):
         cluster, session, kafkaHost, zk = super().setup()
         try:
@@ -184,12 +289,79 @@ class SymbolHandler(HandleBase):
                 logging.error('alias can not be None')
                 return
             [alias] = res
-            pro0 = Popen(['/usr/bin/perl', 'keywrapper.pl',
-                          baseDir, '2048'], stdin=None, stdout=None, cwd='.')
-            pro0.wait()
-            pro1 = Popen(['/usr/bin/perl', 'makeissuer.pl', alias,
-                          symbol, globalId], stdin=None, stdout=None, cwd='.')
-            pro1.wait()
+            stmt = """
+            select playerrepo, step1repo from runtime where id=0
+            """
+            [playerrepo, step1repo] = session.execute(stmt).one()
+            if not playerrepo or not step1repo:
+                logging.error('nowhere to put the key, exit')
+                return
+
+            randomfolder = '{0:02x}'.format(random.randint(0, 255))
+            playerfolder = '{0}/{1}'.format(playerrepo, randomfolder)
+            randomfolder2 = '{0:02x}'.format(random.randint(0, 255))
+            step1folder = '{0}/{1}'.format(step1repo, randomfolder2)
+
+            args = '{0}/openssl-1.0.2o/apps/openssl genrsa {1}\
+'.format(baseDir, 2048).split(' ')
+            output0 = ''
+            with Popen(args, stdout=PIPE) as p:
+                output0 = p.stdout.read()
+            args = 'openssl asn1parse'.split(' ')
+            pqKey, dKey, jgKey = '', '', ''
+            with Popen(args, stdin=PIPE, stdout=PIPE) as p:
+                out1, err1 = p.communicate(input=output0)
+                bns = []
+
+                def bnfilter(x):
+                    return x.startswith("           :")
+
+                for a in out1.split('INTEGER'):
+                    bns0 = list(filter(bnfilter, a.splitlines()))
+                    bns.exend(bns0)
+                pqKey = ''.join(reversed(bns[1])).lower().replace(':', '')
+                dKey = ''.join(reversed(bns[3])).lower().replace(':', '')
+                jgKey = ''.join(reversed(bns[-1])).lower().replace(':', '')
+                pqKey = pqKey.strip()
+                dKey = dKey.strip()
+                jgKey = jgKey.strip()
+                logging.debug('pq = {0}, d = {1}, jg = {2}\
+'.format(pqKey, dKey, jgKey))
+
+            if not pqKey or not dKey or not jgKey:
+                logging.error('None of the 3 keys can be None')
+                return
+            args = 'cat bn40.cpp issuertemp3.cpp'.split(' ')
+            if not pqKey or not dKey or not jgKey:
+                logging.error('None of the 3 keys can be None')
+                return
+            with Popen(args, stdout=PIPE) as p:
+                srcCode = p.stdout.read()
+                srcCode = str(srcCode, 'utf-8')
+                srcCode = srcCode.replace('KEY',
+                                          '{0}@@{1}'.format(pqKey, jgKey))
+                srcCode = srcCode.replace('SYMBOL', symbol)
+                srcCode = srcCode.replace('ALIAS', alias)
+                logging.debug(srcCode)
+            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
+'.format(playerfolder, symbol).split(' ')
+            with Popen(args, stdin=PIPE, stdout=None) as p:
+                p.communicate(input=bytes(srcCode, 'utf-8'))
+            # repo key part
+            args = 'cat bn40.cpp step1v2.cpp'.split(' ')
+            with Popen(args, stdout=PIPE) as p:
+                srcCode = p.stdout.read()
+                srcCode = str(srcCode, 'utf-8')
+                srcCode = srcCode.replace('STEP1KEY',
+                                          '{0}@@{1}'.format(pqKey, dKey))
+                logging.debug(srcCode)
+            args = 'g++ -x c++ -lboost_system -lpthread -o {0}/{1} -\
+'.format(step1folder, symbol).split(' ')
+            with Popen(args, stdin=PIPE, stdout=None) as p:
+                p.communicate(input=bytes(srcCode, 'utf-8'))
+            # save2cass
+            self.save2cass(globalId, pqKey, alias,
+                           symbol, playerfolder, step1folder)
         except Exception as err:
             logging.error(err)
         finally:
@@ -466,10 +638,7 @@ class TransferProposalHandler(HandleBase):
     def processProposal(self, payload):
         try:
             cluster, session, kafkaHost, zk = super().setup()
-            stmt = """
-            select playerrepo from runtime where id=0
-            """
-            [folder] = session.execute(stmt).one()
+
             regexp0 = r'\w+&&\w+\|\|\w+\|\|\d-\>\w+&&\w+&&000&&\w+'
             m = re.match(regexp0, payload)
             if not m:
