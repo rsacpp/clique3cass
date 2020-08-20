@@ -61,11 +61,14 @@ class HandleBase:
         kafka = KafkaConsumer(queueName,
                               group_id='clique3',
                               enable_auto_commit=False,
+                              session_timeout_ms=30000,
+                              legacy_iterator=True,
                               bootstrap_servers=kafkaHost.split(','))
         executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
             try:
                 logging.info(m)
+                kafka.commit()
                 while self.checkLoad():
                     logging.info('it is too hot, sleep 2 seconds')
                     time.sleep(2)
@@ -78,7 +81,6 @@ class HandleBase:
                 """
                 session.execute(stmt, [executionId, queueName, proposal])
                 self.processProposal(proposal)
-                kafka.commit()
             except Exception as err:
                 logging.error(err)
 
