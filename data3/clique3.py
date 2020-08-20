@@ -64,20 +64,23 @@ class HandleBase:
                               bootstrap_servers=kafkaHost.split(','))
         executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
-            logging.info(m)
-            while self.checkLoad():
-                logging.info('it is too hot, sleep 2 seconds')
-                time.sleep(2)
-            proposal = str(m.value, 'utf-8')
-            executionCounter += 1
-            executionId = executionCounter.value
-            stmt = """
-            insert into executions(id, code, ts, payload) \
-            values(%s, %s, toTimestamp(now()), %s) \
-            """
-            session.execute(stmt, [executionId, queueName, proposal])
-            self.processProposal(proposal)
-            kafka.commit()
+            try:
+                logging.info(m)
+                while self.checkLoad():
+                    logging.info('it is too hot, sleep 2 seconds')
+                    time.sleep(2)
+                proposal = str(m.value, 'utf-8')
+                executionCounter += 1
+                executionId = executionCounter.value
+                stmt = """
+                insert into executions(id, code, ts, payload)
+                values(%s, %s, toTimestamp(now()), %s)
+                """
+                session.execute(stmt, [executionId, queueName, proposal])
+                self.processProposal(proposal)
+                kafka.commit()
+            except Exception as err:
+                logging.error(err)
 
     def postTxn(self, txn):
         cluster, session, kafkaHost, zk = self.setup()
