@@ -136,7 +136,7 @@ class AliasHandler(HandleBase):
             sha256 = hashlib.sha256()
             sha256.update('{0}'.format(alias).encode('utf-8'))
             hashCode = sha256.hexdigest()
-            print("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
+            logging.info("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
             stmt = """
             insert into clique3.player0(id, clique, global_id, pq, d,
             alias, hash_code, setup, repo, step1repo)
@@ -269,7 +269,7 @@ class SymbolHandler(HandleBase):
             sha256 = hashlib.sha256()
             sha256.update('{0}'.format(symbol).encode('utf-8'))
             hashCode = sha256.hexdigest()
-            print("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
+            logging.info("entryId = {0}, hashCode = {1}".format(entryId, hashCode))
             stmt = """
             insert into issuer0(id, clique, global_id, pq, d, alias,
             symbol, hash_code, setup, repo, step1repo)
