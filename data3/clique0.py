@@ -197,7 +197,7 @@ if __name__ == '__main__':
 %(thread)d %(pathname)s:%(lineno)s %(message)s"
     logging.basicConfig(format=fmt0,
                         filename='clique0.log',
-                        level=logging.DEBUG)
+                        level=logging.INFO)
 
     with socketserver.TCPServer((argv[1], 21821), TransferHandler) as transfer:
         p21821 = Process(target=transfer.serve_forever)
