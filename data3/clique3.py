@@ -12,7 +12,6 @@ import socket
 import base64
 import subprocess
 
-from datetime import datetime
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
@@ -570,11 +569,9 @@ class TransferHandler(HandleBase):
         zk.stop()
         zk.close()
         logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
-        lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
+lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         if owner0 == owner1 and verdict0 == lastsig:
-            logging.info('{0}: return True'.format(datetime.now()))
             return True
-        logging.info('{0}: return False'.format(datetime.now()))
         return False
 
     def save2ownershipcatalog(self, pq, verdict, proposal,
@@ -585,7 +582,7 @@ class TransferHandler(HandleBase):
         zkc += 1
         rowId = zkc.value
         session.execute("""
-        update ownership0 set owner= %s , updated = toTimestamp(now()), \
+        update ownership0 set owner= %s , updated = toTimestamp(now()),
         verdict0 = %s where note_id = %s""", [target, verdict[-16:], noteId])
         sha256 = hashlib.sha256()
         sha256.update("{0}{1}".format(noteId.strip(),
@@ -685,8 +682,8 @@ if __name__ == '__main__':
     freopen('./stdoutclique3', 'a', sys.stdout)
     freopen('./stderrclique3', 'a', sys.stderr)
 
-    fmt0 = "%(name)s %(levelname)s %(asctime)-15s %(pathname)s:%(lineno)s \
-%(message)s"
+    fmt0 = "%(name)s %(levelname)s %(asctime)-15s %(process)d/\
+%(thread)d %(pathname)s:%(lineno)s %(message)s"
     logging.basicConfig(filename='senate.log', format=fmt0,
                         level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
