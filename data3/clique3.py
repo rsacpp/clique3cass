@@ -87,7 +87,7 @@ class HandleBase:
     def postTxn(self, txn):
         cluster, session, kafkaHost, zk = self.setup()
         res = session.execute('select peer, pq, d from clique3.channel \
-        where port =12821 limit 1').one()
+where port =12821 limit 1').one()
         if res:
             [peer, pq, d] = res
             key = Fernet.generate_key()
@@ -120,12 +120,6 @@ class HandleBase:
     def checkLoad(self):
         (load1, load5, load15) = os.getloadavg()
         return load1 > 0.8
-
-    def path(self, txt):
-        m = hashlib.sha256()
-        m.update(txt.encode('utf-8'))
-        dig = m.hexdigest()
-        return '{0}'.format(dig[0])
 
 
 class AliasHandler(HandleBase):
@@ -199,9 +193,6 @@ class AliasHandler(HandleBase):
                 pqKey = pqKey.strip()
                 dKey = dKey.strip()
                 jgKey = jgKey.strip()
-                # logging.debug('pq = {0}, d = {1}, jg = {2}\
-# '.format(pqKey, # dKey, jgKey))
-
             # client key part
             args = 'cat bn40.cpp payertemp3.cpp'.split(' ')
             with Popen(args, stdout=PIPE) as p:
@@ -209,7 +200,6 @@ class AliasHandler(HandleBase):
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('KEY',
                                           '{0}@@{1}'.format(pqKey, jgKey))
-                # logging.debug(srcCode)
             playerbinary = '{0}/payer3{1}'.format(playerfolder, alias)
             args = 'g++ -x c++ -lboost_system -lpthread -o {0} -\
 '.format(playerbinary).split(' ')
@@ -223,7 +213,6 @@ class AliasHandler(HandleBase):
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
-                # logging.debug(srcCode)
             step1binary = '{0}/step1{1}'.format(step1folder, alias)
             args = 'g++ -x c++ -o {0} -'.format(step1binary).split(' ')
             logging.debug(args)
@@ -339,9 +328,6 @@ class SymbolHandler(HandleBase):
                 pqKey = pqKey.strip()
                 dKey = dKey.strip()
                 jgKey = jgKey.strip()
-                # logging.debug('pq = {0}, d = {1}, jg = {2}\
-# '.format(pqKey, dKey, jgKey))
-
             if not pqKey or not dKey or not jgKey:
                 logging.error('None of the 3 keys can be None')
                 return
@@ -356,7 +342,6 @@ class SymbolHandler(HandleBase):
                                           '{0}@@{1}'.format(pqKey, jgKey))
                 srcCode = srcCode.replace('SYMBOL', symbol)
                 srcCode = srcCode.replace('ALIAS', alias)
-                # logging.debug(srcCode)
             issuerbinary = '{0}/issuer3{1}'.format(playerfolder, symbol)
             args = 'g++ -x c++ -lboost_system -lpthread -o {0} -\
 '.format(issuerbinary).split(' ')
@@ -369,7 +354,6 @@ class SymbolHandler(HandleBase):
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
-                # logging.debug(srcCode)
             step1binary = '{0}/step1{1}'.format(step1folder, symbol)
             args = 'g++ -x c++ -o {0} -'.format(step1binary).split(' ')
             logging.debug(args)
@@ -607,9 +591,9 @@ class TransferHandler(HandleBase):
         sha256.update("{0}{1}".format(noteId.strip(),
                                       target.strip()).encode('utf-8'))
         hashcode = sha256.hexdigest()
-        session.execute("""insert into note_catalog0(id, clique, pq, \
-        verdict, proposal, note, recipient, hook, stmt, setup, hash_code) \
-        values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s) \
+        session.execute("""insert into note_catalog0(id, clique, pq,
+        verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
+        values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
         """, [int(rowId), pq, verdict, proposal,
               "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity),
               target, lastsig, rawtext, hashcode])
@@ -702,7 +686,7 @@ if __name__ == '__main__':
     freopen('./stderrclique3', 'a', sys.stderr)
 
     fmt0 = "%(name)s %(levelname)s %(asctime)-15s %(pathname)s:%(lineno)s \
-    %(message)s"
+%(message)s"
     logging.basicConfig(filename='senate.log', format=fmt0,
                         level=logging.INFO)
     issuePropsalHandler = IssueProposalHandler()
