@@ -709,24 +709,3 @@ if __name__ == '__main__':
     symbolHandler = SymbolHandler()
     symbol3 = Process(target=symbolHandler.process)
     symbol3.start()
-    # from sys import argv
-    # instance = argv[1]
-    # if instance == 'issue0':
-    #     logging.basicConfig(filename='issue0.log', level=logging.INFO)
-    #     var = IssueProposalHandler()
-    # if instance == 'issue3':
-    #     logging.basicConfig(filename='issue3.log', level=logging.INFO)
-    #     var = IssueHandler()
-    # if instance == 'transfer0':
-    #     logging.basicConfig(filename='transfer0.log', level=logging.INFO)
-    #     var = TransferProposalHandler()
-    # if instance == 'transfer3':
-    #     logging.basicConfig(filename='transfer3.log', level=logging.INFO)
-    #     var = TransferHandler()
-    # if instance == 'symbol3':
-    #     logging.basicConfig(filename='symbol3.log', level=logging.INFO)
-    #     var = SymbolHandler()
-    # if instance == 'alias3':
-    #     logging.basicConfig(filename='alias3.log', level=logging.INFO)
-    #     var = AliasHandler()
-    # var.process()
