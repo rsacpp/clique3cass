@@ -448,36 +448,41 @@ pq = {1}'.format(symbol, pq, step1repo))
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
         cluster, session, kafkaHost, zk = super().setup()
-        zkc = zk.Counter("/ownershipId3", default=0x700)
-        zkc += 1
-        ownershipId = zkc.value
-        zkc = zk.Counter("/noteId3", default=0x700)
-        zkc += 1
-        rowId = zkc.value
-        zk.stop()
-        zk.close()
-        sha256 = hashlib.sha256()
-        sha256.update("{0}{1}".format(noteId.strip(),
-                                      target.strip()).encode('utf-8'))
-        hashcode = sha256.hexdigest()
-        # save into 2 tables ownership0& note_catalog0
-        session.execute("""
-        insert into ownership0(seq, clique, symbol, note_id, quantity, owner, \
-        updated, hash_code, verdict0)values(%s, '3', %s, %s, %s, %s, \
-        toTimestamp(now()), %s, %s)
-        """, [int(ownershipId), symbol.strip(), noteId.strip(),
-              int(quantity.strip()), target.strip(),
-              hashcode.strip(), verdict[-16:]])
+        try:
+            zkc = zk.Counter("/ownershipId3", default=0x700)
+            zkc += 1
+            ownershipId = zkc.value
+            zkc = zk.Counter("/noteId3", default=0x700)
+            zkc += 1
+            rowId = zkc.value
 
-        session.execute("""
-        insert into note_catalog0(id, clique, pq, verdict, proposal, note, \
-        recipient, hook, stmt, setup, hash_code)
-        values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
-        """, [int(rowId), pq.strip(), verdict.strip(), proposal.strip(),
-              "{0}||{1}||{2}".format(symbol.strip(),
-                                     noteId.strip(), quantity.strip()),
-              target.strip(), rawtext.strip(), hashcode.strip()])
-        cluster.shutdown()
+            sha256 = hashlib.sha256()
+            sha256.update("{0}{1}".format(noteId.strip(),
+                                          target.strip()).encode('utf-8'))
+            hashcode = sha256.hexdigest()
+            # save into 2 tables ownership0& note_catalog0
+            session.execute("""
+            insert into ownership0(seq, clique, symbol, note_id, quantity,
+            owner, updated, hash_code, verdict0)values(%s, '3', %s, %s, %s, %s,
+            toTimestamp(now()), %s, %s)
+            """, [int(ownershipId), symbol.strip(), noteId.strip(),
+                  int(quantity.strip()), target.strip(),
+                  hashcode.strip(), verdict[-16:]])
+
+            session.execute("""
+            insert into note_catalog0(id, clique, pq, verdict,
+            proposal, note, recipient, hook, stmt, setup, hash_code)
+            values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
+            """, [int(rowId), pq.strip(), verdict.strip(), proposal.strip(),
+                  "{0}||{1}||{2}".format(symbol.strip(),
+                                         noteId.strip(), quantity.strip()),
+                  target.strip(), rawtext.strip(), hashcode.strip()])
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
 
 
 class TransferHandler(HandleBase):
@@ -558,46 +563,55 @@ class TransferHandler(HandleBase):
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
-        [owner0, verdict0] = session.execute("""
-        select owner, verdict0 from ownership0 where note_id = %s
-        """, [noteId]).one()
-        [owner1] = session.execute("""
-        select alias from player0 where pq = %s
-        """, [pq]).one()
-
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
-        logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
+        try:
+            [owner0, verdict0] = session.execute("""
+            select owner, verdict0 from ownership0 where note_id = %s
+            """, [noteId]).one()
+            [owner1] = session.execute("""
+            select alias from player0 where pq = %s
+            """, [pq]).one()
+            logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
 lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
-        if owner0 == owner1 and verdict0 == lastsig:
-            return True
-        return False
+            if owner0 == owner1 and verdict0 == lastsig:
+                return True
+            return False
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
 
     def save2ownershipcatalog(self, pq, verdict, proposal,
                               rawtext, symbol, noteId, quantity,
                               target, lastsig):
         cluster, session, kafkaHost, zk = super().setup()
-        zkc = zk.Counter("/noteId3", default=0x7000)
-        zkc += 1
-        rowId = zkc.value
-        session.execute("""
-        update ownership0 set owner= %s , updated = toTimestamp(now()),
-        verdict0 = %s where note_id = %s""", [target, verdict[-16:], noteId])
-        sha256 = hashlib.sha256()
-        sha256.update("{0}{1}".format(noteId.strip(),
-                                      target.strip()).encode('utf-8'))
-        hashcode = sha256.hexdigest()
-        session.execute("""insert into note_catalog0(id, clique, pq,
-        verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
-        values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
-        """, [int(rowId), pq, verdict, proposal,
-              "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(), quantity),
-              target, lastsig, rawtext, hashcode])
-        logging.info('saving completes')
-        cluster.shutdown()
-        zk.stop()
-        zk.close()
+        try:
+            zkc = zk.Counter("/noteId3", default=0x7000)
+            zkc += 1
+            rowId = zkc.value
+            session.execute("""
+            update ownership0 set owner= %s , updated = toTimestamp(now()),
+            verdict0 = %s where note_id = %s""",
+                            [target, verdict[-16:], noteId])
+            sha256 = hashlib.sha256()
+            sha256.update("{0}{1}".format(noteId.strip(),
+                                          target.strip()).encode('utf-8'))
+            hashcode = sha256.hexdigest()
+            session.execute("""insert into note_catalog0(id, clique, pq,
+            verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
+            values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
+            """, [int(rowId), pq, verdict, proposal,
+                  "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(),
+                                         quantity),
+                  target, lastsig, rawtext, hashcode])
+            logging.info('saving completes')
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+            zk.stop()
+            zk.close()
 
 
 class IssueProposalHandler(HandleBase):
