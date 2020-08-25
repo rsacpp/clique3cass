@@ -69,7 +69,7 @@ class HandleBase:
                 logging.info(m)
                 kafka.commit()
                 while self.checkLoad():
-                    logging.info('it is too hot, sleep 2 seconds')
+                    # logging.info('it is too hot, sleep 2 seconds')
                     time.sleep(2)
                 proposal = str(m.value, 'utf-8')
                 executionCounter += 1
@@ -85,19 +85,21 @@ class HandleBase:
 
     def postTxn(self, txn):
         cluster, session, kafkaHost, zk = self.setup()
-        res = session.execute('select peer, pq, d from clique3.channel \
+        try:
+            res = session.execute('select peer, pq, d from clique3.channel \
 where port =12821 limit 1').one()
-        if res:
-            [peer, pq, d] = res
-            key = Fernet.generate_key()
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((peer, 12821))
-            cipher_str = str(binascii.b2a_hex(
-                base64.urlsafe_b64decode(key)), 'utf-8')
-            args = './crypt', pq, d, cipher_str
-            with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
-                cipher = p.stdout.read()
-                if cipher:
+            if res:
+                [peer, pq, d] = res
+                key = Fernet.generate_key()
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((peer, 12821))
+                cipher_str = str(binascii.b2a_hex(
+                    base64.urlsafe_b64decode(key)), 'utf-8')
+                args = './crypt', pq, d, cipher_str
+                with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
+                    cipher = p.stdout.read()
+                    if not cipher:
+                        return
                     cipher = str(cipher, 'utf-8').strip()
                     cipher = '^^^>>CIPHER<<{0}$$$'.format(cipher)
                     size = len(cipher)
@@ -109,9 +111,12 @@ where port =12821 limit 1').one()
                     sock.send(token)
                     sock.shutdown(socket.SHUT_RDWR)
                     sock.close()
-        zk.stop()
-        zk.close()
-        cluster.shutdown()
+        except Exception as err:
+            logging.error(err)
+        finally:
+            zk.stop()
+            zk.close()
+            cluster.shutdown()
 
     def processProposal(self, proposal):
         pass
@@ -490,7 +495,7 @@ class TransferHandler(HandleBase):
         return 'transfer3'
 
     def processProposal(self, proposal):
-        logging.info(proposal)
+        # logging.info(proposal)
         cluster, session, kafkaHost, zk = super().setup()
         try:
             (pq, prop) = proposal.split('@@')
@@ -506,7 +511,7 @@ class TransferHandler(HandleBase):
             [alias, step1repo] = session.execute("""
             select alias, step1repo from clique3.player0 where pq = %s
             """, [pq]).one()
-            logging.info('alias={0}, step1repo={1}'.format(alias, step1repo))
+            # logging.info('alias={0}, step1repo={1}'.format(alias, step1repo))
             if not alias:
                 logging.error('alias for pq {0} can not be None'.format(pq))
                 return
@@ -522,7 +527,7 @@ class TransferHandler(HandleBase):
             note = pro2.communicate()[0].decode().strip()
             note = note.strip()
             note = note.rstrip('0')
-            logging.info(note)
+            logging.debug(note)
             if not note.startswith('5e5e'):
                 logging.error('invalid msg: {0}'.format(note))
                 return
@@ -537,8 +542,8 @@ class TransferHandler(HandleBase):
             (target, lastsig, lastblock) = right.split('@@')
             (symbol, noteId, quantity) = left.split('||')
             symbol = symbol.split('::')[1]
-            logging.info("pq = {0}, symbol= {1}, noteId = {2}, quantity = {3}, \
-            lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
+            logging.debug("pq = {0}, symbol= {1}, noteId = {2}, quantity = {3}, \
+lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
             if self.verify(pq, symbol, noteId, quantity, lastsig):
                 self.save2ownershipcatalog(pq,
                                            verdict,
@@ -570,7 +575,7 @@ class TransferHandler(HandleBase):
             [owner1] = session.execute("""
             select alias from player0 where pq = %s
             """, [pq]).one()
-            logging.info('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
+            logging.debug('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
 lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             if owner0 == owner1 and verdict0 == lastsig:
                 return True
@@ -605,7 +610,7 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
                   "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(),
                                          quantity),
                   target, lastsig, rawtext, hashcode])
-            logging.info('saving completes')
+            logging.debug('saving completes')
         except Exception as err:
             logging.error(err)
         finally:
@@ -626,7 +631,7 @@ class IssueProposalHandler(HandleBase):
             select repo from clique3.issuer0 where symbol = %s limit 1
             """
             [repopath] = session.execute(stmt, [symbol]).one()
-            logging.info(repopath)
+            # logging.info(repopath)
             if not repopath:
                 logging.eror('binary file for symbol {0} \
 is None'.format(symbol))
@@ -671,7 +676,7 @@ class TransferProposalHandler(HandleBase):
                 return
             raw = "^^{0}::{1}@@{2}@@{3}$$".format(
                 alias, rawCode, lastTxn, lastBlock)
-            logging.info(raw)
+            logging.debug(raw)
             pro3 = Popen([binarypath, 'localhost', raw],
                          stdin=None, stdout=None)
             pro3.wait()
