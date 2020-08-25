@@ -66,7 +66,7 @@ class HandleBase:
         executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
             try:
-                logging.info(m)
+                logging.debug(m)
                 kafka.commit()
                 while self.checkLoad():
                     # logging.info('it is too hot, sleep 2 seconds')
