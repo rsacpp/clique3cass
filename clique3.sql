@@ -81,6 +81,12 @@ primary key(id)
 );
 create index note_catalog0_note on note_catalog0(note);
 
+create table issue0stat(
+ts bigint,
+symbol text,
+primary key(ts, symbol)
+);
+create index issue0stat_symbol on issue0stat(symbol);
 
 create table reserved0(
 seq bigint,
