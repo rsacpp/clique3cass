@@ -442,7 +442,8 @@ pq = {1}'.format(symbol, pq, step1repo))
             session.execute("""
             insert into note_catalog0(id, seq, clique, pq, verdict,
             proposal, note, recipient, hook, stmt, setup, hash_code)
-            values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
+            values(%s, %s, '3',
+            %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
             """, [uuid.uuid4(), int(time.time()),
                   pq.strip(), verdict.strip(), proposal.strip(),
                   "{0}||{1}||{2}".format(symbol.strip(),
@@ -562,7 +563,8 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             hashcode = sha256.hexdigest()
             session.execute("""insert into note_catalog0(id,seq,clique, pq,
             verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
-            values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
+            values(%s, %s, '3',
+            %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
             """, [uuid.uuid4(), int(time.time()), pq, verdict, proposal,
                   "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(),
                                          quantity),
