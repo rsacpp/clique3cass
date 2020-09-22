@@ -11,8 +11,6 @@ import binascii
 import logging
 import socket
 import base64
-import subprocess
-
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
@@ -77,6 +75,27 @@ class HandleBase:
             except Exception as err:
                 logging.error(err)
 
+    def save2forge(self, txn):
+        try:
+            cluster, session, kafkaHost = self.setup()
+            (pq, proposal, verdict, e) = txn.split('||')
+            if not pq or not proposal or not verdict:
+                return
+            tag = int(time.time()/128)
+            stmt = """
+            insert into forge.raw_txns
+            (seq, tag, pq, proposal, verdict, txn_refer,
+            block_refer, ts)
+            values({0}, '{1}', '{2}', '{3}', '{4}', '{5}',
+            '{6}', toTimestamp(now()))
+            """.format(uuid.uuid4(), tag, pq,
+                       proposal, verdict, '', '')
+            session.execute(stmt)
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+
     def postTxn(self, txn):
         cluster, session, kafkaHost = self.setup()
         try:
@@ -91,7 +110,7 @@ where port =12821 limit 1').one()
                     base64.urlsafe_b64decode(key)), 'utf-8')
                 args = './crypt', pq, d, cipher_str
                 cipher = ''
-                with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
+                with Popen(args, stdout=PIPE) as p:
                     cipher = p.stdout.read()
                 if not cipher:
                     return
@@ -423,7 +442,8 @@ pq = {1}'.format(symbol, pq, step1repo))
                                                      verdict,
                                                      '30001')
                 logging.debug(txnTxt)
-                super().postTxn(txnTxt)
+                # super().postTxn(txnTxt)
+                super().save2forge(txnTxt)
         except Exception as err:
             logging.error(err)
         finally:
@@ -530,7 +550,8 @@ lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
                                                      prop,
                                                      verdict,
                                                      '30001')
-                super().postTxn(txnTxt)
+                # super().postTxn(txnTxt)
+                super().save2forge(txnTxt)
         except Exception as err:
             logging.error(err)
         finally:
