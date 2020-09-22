@@ -11,8 +11,6 @@ import binascii
 import logging
 import socket
 import base64
-import subprocess
-
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
@@ -77,6 +75,27 @@ class HandleBase:
             except Exception as err:
                 logging.error(err)
 
+    def save2forge(self, txn):
+        try:
+            cluster, session, kafkaHost = self.setup()
+            (pq, proposal, verdict, e) = txn.split('||')
+            if not pq or not proposal or not verdict:
+                return
+            tag = int(time.time()/128)
+            stmt = """
+            insert into forge.raw_txns
+            (seq, tag, pq, proposal, verdict, txn_refer,
+            block_refer, ts)
+            values({0}, '{1}', '{2}', '{3}', '{4}', '{5}',
+            '{6}', toTimestamp(now()))
+            """.format(uuid.uuid4(), tag, pq,
+                       proposal, verdict, '', '')
+            session.execute(stmt)
+        except Exception as err:
+            logging.error(err)
+        finally:
+            cluster.shutdown()
+
     def postTxn(self, txn):
         cluster, session, kafkaHost = self.setup()
         try:
@@ -90,10 +109,12 @@ where port =12821 limit 1').one()
                 cipher_str = str(binascii.b2a_hex(
                     base64.urlsafe_b64decode(key)), 'utf-8')
                 args = './crypt', pq, d, cipher_str
-                with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
+                cipher = ''
+                with Popen(args, stdout=PIPE) as p:
                     cipher = p.stdout.read()
-                    if not cipher:
-                        return
+                if not cipher:
+                    return
+                else:
                     cipher = str(cipher, 'utf-8').strip()
                     cipher = '^^^>>CIPHER<<{0}$$$'.format(cipher)
                     size = len(cipher)
@@ -169,8 +190,8 @@ class AliasHandler(HandleBase):
             pqKey, dKey, jgKey = '', '', ''
             with Popen(args, stdin=PIPE, stdout=PIPE) as p:
                 out1, err1 = p.communicate(input=output0)
+            if out1:
                 out1 = str(out1, 'utf-8')
-
                 bns = []
                 for a in out1.split('INTEGER'):
                     bns0 = list(filter(bnfilter, a.splitlines()))
@@ -186,6 +207,7 @@ class AliasHandler(HandleBase):
             args = 'cat bn40.cpp payertemp3.cpp'.split(' ')
             with Popen(args, stdout=PIPE) as p:
                 srcCode = p.stdout.read()
+            if srcCode:
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('KEY',
                                           '{0}@@{1}'.format(pqKey, jgKey))
@@ -199,6 +221,7 @@ class AliasHandler(HandleBase):
             args = 'cat bn40.cpp step1v2.cpp'.split(' ')
             with Popen(args, stdout=PIPE) as p:
                 srcCode = p.stdout.read()
+            if srcCode:
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
@@ -293,6 +316,7 @@ class SymbolHandler(HandleBase):
             pqKey, dKey, jgKey = '', '', ''
             with Popen(args, stdin=PIPE, stdout=PIPE) as p:
                 out1, err1 = p.communicate(input=output0)
+            if out1:
                 out1 = str(out1, 'utf-8')
                 bns = []
 
@@ -317,6 +341,7 @@ class SymbolHandler(HandleBase):
                 return
             with Popen(args, stdout=PIPE) as p:
                 srcCode = p.stdout.read()
+            if srcCode:
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('KEY',
                                           '{0}@@{1}'.format(pqKey, jgKey))
@@ -331,6 +356,7 @@ class SymbolHandler(HandleBase):
             args = 'cat bn40.cpp step1v2.cpp'.split(' ')
             with Popen(args, stdout=PIPE) as p:
                 srcCode = p.stdout.read()
+            if srcCode:
                 srcCode = str(srcCode, 'utf-8')
                 srcCode = srcCode.replace('STEP1KEY',
                                           '{0}@@{1}'.format(pqKey, dKey))
@@ -416,7 +442,8 @@ pq = {1}'.format(symbol, pq, step1repo))
                                                      verdict,
                                                      '30001')
                 logging.debug(txnTxt)
-                super().postTxn(txnTxt)
+                # super().postTxn(txnTxt)
+                super().save2forge(txnTxt)
         except Exception as err:
             logging.error(err)
         finally:
@@ -523,7 +550,8 @@ lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
                                                      prop,
                                                      verdict,
                                                      '30001')
-                super().postTxn(txnTxt)
+                # super().postTxn(txnTxt)
+                super().save2forge(txnTxt)
         except Exception as err:
             logging.error(err)
         finally:
