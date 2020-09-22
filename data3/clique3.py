@@ -3,6 +3,7 @@ import os
 import re
 import time
 import sys
+import uuid
 import random
 import hashlib
 import configparser
@@ -15,7 +16,6 @@ import subprocess
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
-from kazoo.client import KazooClient
 from kafka import KafkaProducer, KafkaConsumer
 from cryptography.fernet import Fernet
 
@@ -43,18 +43,15 @@ class HandleBase:
         cassHost = config['clique3cass']['cassandraHost']
         cassKeyspace = config['clique3cass']['cassandraKeyspace']
         kafkaHost = config['clique3cass']['kafkaHost']
-        zkHost = config['clique3cass']['zkHost']
         cluster = Cluster(cassHost.split(','))
         session = cluster.connect(cassKeyspace)
-        zk = KazooClient(hosts=zkHost)
-        zk.start()
-        return cluster, session, kafkaHost, zk
+        return cluster, session, kafkaHost
 
     def queueName(self):
         pass
 
     def process(self):
-        cluster, session, kafkaHost, zk = self.setup()
+        cluster, session, kafkaHost = self.setup()
         queueName = self.queueName()
         logging.info('queue Name: {0}'.format(queueName))
         kafka = KafkaConsumer(queueName,
@@ -63,7 +60,6 @@ class HandleBase:
                               session_timeout_ms=30000,
                               legacy_iterator=True,
                               bootstrap_servers=kafkaHost.split(','))
-        executionCounter = zk.Counter("/executions", default=0x7000)
         for m in kafka:
             try:
                 logging.debug(m)
@@ -72,19 +68,17 @@ class HandleBase:
                     # logging.info('it is too hot, sleep 2 seconds')
                     time.sleep(2)
                 proposal = str(m.value, 'utf-8')
-                executionCounter += 1
-                executionId = executionCounter.value
                 stmt = """
                 insert into executions(id, code, ts, payload)
                 values(%s, %s, toTimestamp(now()), %s)
                 """
-                session.execute(stmt, [executionId, queueName, proposal])
+                session.execute(stmt, [uuid.uuid4(), queueName, proposal])
                 self.processProposal(proposal)
             except Exception as err:
                 logging.error(err)
 
     def postTxn(self, txn):
-        cluster, session, kafkaHost, zk = self.setup()
+        cluster, session, kafkaHost = self.setup()
         try:
             res = session.execute('select peer, pq, d from clique3.channel \
 where port =12821 limit 1').one()
@@ -116,8 +110,6 @@ where port =12821 limit 1').one()
         except Exception as err:
             logging.error(err)
         finally:
-            zk.stop()
-            zk.close()
             cluster.shutdown()
 
     def processProposal(self, proposal):
@@ -125,7 +117,7 @@ where port =12821 limit 1').one()
 
     def checkLoad(self):
         (load1, load5, load15) = os.getloadavg()
-        return load1 > 0.8
+        return load1 > 1.25
 
 
 class AliasHandler(HandleBase):
@@ -134,31 +126,24 @@ class AliasHandler(HandleBase):
 
     def save2cass(self, alias, globalId, pq, repoPath, step1Path):
         try:
-            cluster, session, kafkaHost, zk = super().setup()
-            zkc = zk.Counter("/aliasId3", default=0x700)
-            zkc += 1
-            entryId = zkc.value
+            cluster, session, kafkaHost = super().setup()
             sha256 = hashlib.sha256()
             sha256.update('{0}'.format(alias).encode('utf-8'))
             hashCode = sha256.hexdigest()
-            logging.info("entryId = {0}, hashCode = {1} \
-".format(entryId, hashCode))
             stmt = """
             insert into clique3.player0(id, clique, global_id, pq, d,
             alias, hash_code, setup, repo, step1repo)
             values(%s, '3', %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
             """
-            session.execute(stmt, [int(entryId), globalId, pq, '', alias,
+            session.execute(stmt, [uuid.uuid4(), globalId, pq, '', alias,
                                    hashCode, repoPath, step1Path])
         except Exception as err:
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
     def processProposal(self, proposal):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
         try:
             stmt = """
@@ -254,8 +239,6 @@ class AliasHandler(HandleBase):
         finally:
             kafkaproducer.close()
             cluster.shutdown()
-            zk.stop()
-            zk.close()
             time.sleep(2)
 
 
@@ -264,32 +247,25 @@ class SymbolHandler(HandleBase):
         return 'symbol3'
 
     def save2cass(self, globalId, pq, alias, symbol, playerPath, step1Path):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
-            zkc = zk.Counter("/issuerId3", default=0x700)
-            zkc += 1
-            entryId = zkc.value
             sha256 = hashlib.sha256()
             sha256.update('{0}'.format(symbol).encode('utf-8'))
             hashCode = sha256.hexdigest()
-            logging.info("entryId = {0}, hashCode = {1} \
-".format(entryId, hashCode))
             stmt = """
             insert into issuer0(id, clique, global_id, pq, d, alias,
             symbol, hash_code, setup, repo, step1repo)
             values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
             """
-            session.execute(stmt, [int(entryId), globalId, pq, '', alias,
+            session.execute(stmt, [uuid.uuid4(), globalId, pq, '', alias,
                                    symbol, hashCode, playerPath, step1Path])
         except Exception as err:
             logging.error(err)
         finally:
-            zk.stop()
-            zk.close()
             cluster.shutdown()
 
     def processProposal(self, proposal):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
             (globalId, symbol) = proposal.split('||')
             res = session.execute("""
@@ -376,8 +352,6 @@ class SymbolHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            zk.stop()
-            zk.close()
             cluster.shutdown()
             time.sleep(2)
 
@@ -387,7 +361,7 @@ class IssueHandler(HandleBase):
         return 'issue3'
 
     def processProposal(self, proposal):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
             (pq, prop) = proposal.split('@@')
             if not pq or not prop:
@@ -454,20 +428,11 @@ pq = {1}'.format(symbol, pq, step1repo))
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
-            zkc = zk.Counter("/ownershipId3", default=0x700)
-            zkc += 1
-            ownershipId = zkc.value
-            zkc = zk.Counter("/noteId3", default=0x700)
-            zkc += 1
-            rowId = zkc.value
-
             sha256 = hashlib.sha256()
             sha256.update("{0}{1}".format(noteId.strip(),
                                           target.strip()).encode('utf-8'))
@@ -477,15 +442,17 @@ pq = {1}'.format(symbol, pq, step1repo))
             insert into ownership0(seq, clique, symbol, note_id, quantity,
             owner, updated, hash_code, verdict0)values(%s, '3', %s, %s, %s, %s,
             toTimestamp(now()), %s, %s)
-            """, [int(ownershipId), symbol.strip(), noteId.strip(),
+            """, [int(time.time()), symbol.strip(), noteId.strip(),
                   int(quantity.strip()), target.strip(),
                   hashcode.strip(), verdict[-16:]])
 
             session.execute("""
-            insert into note_catalog0(id, clique, pq, verdict,
+            insert into note_catalog0(id, seq, clique, pq, verdict,
             proposal, note, recipient, hook, stmt, setup, hash_code)
-            values(%s, '3', %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
-            """, [int(rowId), pq.strip(), verdict.strip(), proposal.strip(),
+            values(%s, %s, '3',
+            %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
+            """, [uuid.uuid4(), int(time.time()),
+                  pq.strip(), verdict.strip(), proposal.strip(),
                   "{0}||{1}||{2}".format(symbol.strip(),
                                          noteId.strip(), quantity.strip()),
                   target.strip(), rawtext.strip(), hashcode.strip()])
@@ -493,8 +460,6 @@ pq = {1}'.format(symbol, pq, step1repo))
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
 
 class TransferHandler(HandleBase):
@@ -503,7 +468,7 @@ class TransferHandler(HandleBase):
 
     def processProposal(self, proposal):
         # logging.info(proposal)
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
             (pq, prop) = proposal.split('@@')
             pq = pq.strip()
@@ -570,11 +535,9 @@ lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
             [owner0, verdict0] = session.execute("""
             select owner, verdict0 from ownership0 where note_id = %s
@@ -591,17 +554,12 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
     def save2ownershipcatalog(self, pq, verdict, proposal,
                               rawtext, symbol, noteId, quantity,
                               target, lastsig):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
-            zkc = zk.Counter("/noteId3", default=0x7000)
-            zkc += 1
-            rowId = zkc.value
             session.execute("""
             update ownership0 set owner= %s , updated = toTimestamp(now()),
             verdict0 = %s where note_id = %s""",
@@ -610,10 +568,11 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             sha256.update("{0}{1}".format(noteId.strip(),
                                           target.strip()).encode('utf-8'))
             hashcode = sha256.hexdigest()
-            session.execute("""insert into note_catalog0(id, clique, pq,
+            session.execute("""insert into note_catalog0(id,seq,clique, pq,
             verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
-            values(%s, '3', %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
-            """, [int(rowId), pq, verdict, proposal,
+            values(%s, %s, '3',
+            %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
+            """, [uuid.uuid4(), int(time.time()), pq, verdict, proposal,
                   "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(),
                                          quantity),
                   target, lastsig, rawtext, hashcode])
@@ -622,8 +581,6 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
 
 class IssueProposalHandler(HandleBase):
@@ -631,7 +588,7 @@ class IssueProposalHandler(HandleBase):
         return 'issue0'
 
     def processProposal(self, payload):
-        cluster, session, kafkaHost, zk = super().setup()
+        cluster, session, kafkaHost = super().setup()
         try:
             (symbol, quantity, globalId) = payload.split('||')
             stmt = """
@@ -650,8 +607,6 @@ is None'.format(symbol))
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
 
 class TransferProposalHandler(HandleBase):
@@ -660,7 +615,7 @@ class TransferProposalHandler(HandleBase):
 
     def processProposal(self, payload):
         try:
-            cluster, session, kafkaHost, zk = super().setup()
+            cluster, session, kafkaHost = super().setup()
 
             regexp0 = r'\w+&&\w+\|\|\w+\|\|\d-\>\w+&&\w+&&000&&\w+'
             m = re.match(regexp0, payload)
@@ -691,8 +646,6 @@ class TransferProposalHandler(HandleBase):
             logging.error(err)
         finally:
             cluster.shutdown()
-            zk.stop()
-            zk.close()
 
 
 if __name__ == '__main__':
