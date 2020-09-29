@@ -84,9 +84,9 @@ create index note_catalog0_note on note_catalog0(note);
 create index note_catalog0_seq on note_catalog0(seq);
 
 create table issue0stat(
-ts bigint,
+id uuid,
 symbol text,
-primary key(ts, symbol)
+primary key(id)
 );
 create index issue0stat_symbol on issue0stat(symbol);
 
