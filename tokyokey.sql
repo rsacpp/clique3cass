@@ -1,9 +1,9 @@
-delete from clique3.channel where port = 12821 and peer = '172.31.37.114';
-delete from forge.channel where port = 12821 and peer = '172.31.37.114';
-delete from forge.channel where port = 12822 and peer = '172.31.37.114';
+delete from clique3.channel where port = 12821;
+delete from forge.channel where port = 12821;
+delete from forge.channel where port = 12822;
 -- delete from forge.channel where port = 12822 and peer = '172.31.25.140';
-delete from forge.channel where port = 12823 and peer = '172.31.37.114';
-delete from instance3.channel where port = 12823 and peer = '172.31.37.114';
+delete from forge.channel where port = 12823;
+delete from instance3.channel where port = 12823;
 
 
 insert into clique3.channel(peer, port, pq, d) values('172.31.37.114', 12821, '3b18bfc56b053e2b0fb91b56de85b3410918d2a428a68d28e55892fb52a7e7ece12002d2e98f654b7eaf480f56f603d90c517e8923bb70076717a1997411edc2baa6d9a58fe147a27d87357929b0c69c423033d3d883b9f23defd1949d1dab5c',
