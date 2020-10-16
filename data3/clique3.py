@@ -55,7 +55,8 @@ class HandleBase:
         kafka = KafkaConsumer(queueName,
                               group_id='clique3',
                               enable_auto_commit=False,
-                              session_timeout_ms=30000,
+                              session_timeout_ms=300000,
+                              heartbeat_interval_ms=30000,
                               legacy_iterator=True,
                               bootstrap_servers=kafkaHost.split(','))
         for m in kafka:
@@ -178,8 +179,7 @@ class AliasHandler(HandleBase):
             step1folder = '{0}/{1}'.format(step1repo, randomfolder2)
 
             (alias, globalId) = proposal.split('||')
-            args = '{0}/openssl-1.0.2o/apps/openssl genrsa {1}\
-'.format(baseDir, 2048).split(' ')
+            args = '{0} genrsa {1}'.format(baseDir, 2048).split(' ')
             output0 = ''
             with Popen(args, stdout=PIPE) as p:
                 output0 = p.stdout.read()
@@ -307,8 +307,7 @@ class SymbolHandler(HandleBase):
             randomfolder2 = '{0:02x}'.format(random.randint(0, 255))
             step1folder = '{0}/{1}'.format(step1repo, randomfolder2)
 
-            args = '{0}/openssl-1.0.2o/apps/openssl genrsa {1}\
-'.format(baseDir, 2048).split(' ')
+            args = '{0} genrsa {1}'.format(baseDir, 2048).split(' ')
             output0 = ''
             with Popen(args, stdout=PIPE) as p:
                 output0 = p.stdout.read()
@@ -621,7 +620,7 @@ class IssueProposalHandler(HandleBase):
                 logging.eror('binary file for symbol {0} \
 is None'.format(symbol))
                 return
-            pro3 = Popen([repopath, 'localhost', quantity],
+            pro3 = Popen([repopath, '172.31.38.31', quantity],
                          stdin=None, stdout=None)
             pro3.wait()
         except Exception as err:
@@ -660,7 +659,7 @@ class TransferProposalHandler(HandleBase):
             raw = "^^{0}::{1}@@{2}@@{3}$$".format(
                 alias, rawCode, lastTxn, lastBlock)
             logging.debug(raw)
-            pro3 = Popen([binarypath, 'localhost', raw],
+            pro3 = Popen([binarypath, '172.31.38.31', raw],
                          stdin=None, stdout=None)
             pro3.wait()
         except Exception as err:
