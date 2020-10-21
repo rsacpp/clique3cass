@@ -14,6 +14,7 @@ import base64
 from multiprocessing import Process
 from subprocess import Popen, PIPE
 from cassandra.cluster import Cluster
+from cassandra.policies import DCAwareRoundRobinPolicy
 from kafka import KafkaProducer, KafkaConsumer
 from cryptography.fernet import Fernet
 
@@ -41,7 +42,8 @@ class HandleBase:
         cassHost = config['clique3cass']['cassandraHost']
         cassKeyspace = config['clique3cass']['cassandraKeyspace']
         kafkaHost = config['clique3cass']['kafkaHost']
-        cluster = Cluster(cassHost.split(','))
+        cluster = Cluster(cassHost.split(','), protocol_version=4,
+                          load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'))
         session = cluster.connect(cassKeyspace)
         return cluster, session, kafkaHost
 
@@ -250,6 +252,12 @@ class AliasHandler(HandleBase):
                     continue
                 # end the loop
                 break
+            if globalId == 'Google115136090671469415385':
+                symbol = 'USD'
+            if globalId == 'Google102228491863774850583':
+                symbol = 'CNY'
+            if globalId == 'Google102652840927564616537':
+                symbol = 'GBP'
             kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
             kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
             kafkaproducer.flush()
@@ -390,7 +398,7 @@ class IssueHandler(HandleBase):
             stmt = """select checksumpq, checksumd from runtime
             where id = 0 limit 1"""
             (checksumpq, checksumd) = session.execute(stmt).one()
-            pro1 = Popen(['./step1', checksumpq, checksumd, prop[-16:]],
+            pro1 = Popen(['./crypt', checksumpq, checksumd, prop[-16:]],
                          stdin=None, stdout=PIPE)
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
@@ -495,7 +503,7 @@ class TransferHandler(HandleBase):
             stmt = """select checksumpq, checksumd from runtime
             where id = 0 limit 1"""
             (checksumpq, checksumd) = session.execute(stmt).one()
-            pro1 = Popen(['./step1', checksumpq, checksumd, proposal[-16:]],
+            pro1 = Popen(['./crypt', checksumpq, checksumd, proposal[-16:]],
                          stdin=None, stdout=PIPE)
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
