@@ -12,6 +12,7 @@ import hashlib
 from sys import argv
 from multiprocessing import Process
 from cassandra.cluster import Cluster
+from cassandra.policies import DCAwareRoundRobinPolicy
 from kafka import KafkaProducer
 
 
@@ -29,7 +30,9 @@ def freopen(f, mode, stream):
 
 class Handler0(socketserver.BaseRequestHandler):
     def setupCass(self):
-        cluster = Cluster(argv[1].split(','))
+        cluster = Cluster(argv[1].split(','),
+                          protocol_version=4,
+                          load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'))
         session = cluster.connect('clique3')
         return session, cluster
 
