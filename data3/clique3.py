@@ -628,7 +628,7 @@ class IssueProposalHandler(HandleBase):
                 logging.eror('binary file for symbol {0} \
 is None'.format(symbol))
                 return
-            pro3 = Popen([repopath, '172.31.38.31', quantity],
+            pro3 = Popen([repopath, '172.31.50.102', quantity],
                          stdin=None, stdout=None)
             pro3.wait()
         except Exception as err:
@@ -667,7 +667,7 @@ class TransferProposalHandler(HandleBase):
             raw = "^^{0}::{1}@@{2}@@{3}$$".format(
                 alias, rawCode, lastTxn, lastBlock)
             logging.debug(raw)
-            pro3 = Popen([binarypath, '172.31.38.31', raw],
+            pro3 = Popen([binarypath, '172.31.50.102', raw],
                          stdin=None, stdout=None)
             pro3.wait()
         except Exception as err:
