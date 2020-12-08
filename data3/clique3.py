@@ -139,7 +139,7 @@ where port =12821 limit 1').one()
 
     def checkLoad(self):
         (load1, load5, load15) = os.getloadavg()
-        return load1 > 1.25
+        return load1 > 0.7
 
 
 class AliasHandler(HandleBase):
@@ -255,9 +255,9 @@ class AliasHandler(HandleBase):
             if globalId == 'Google115136090671469415385':
                 symbol = 'USD'
             if globalId == 'Google102228491863774850583':
-                symbol = 'CNY'
+                symbol = 'Federal2020President'
             if globalId == 'Google102652840927564616537':
-                symbol = 'GBP'
+                symbol = 'NC2020Senator'
             kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
             kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
             kafkaproducer.flush()
