@@ -139,6 +139,7 @@ where port =12821 limit 1').one()
 
     def checkLoad(self):
         (load1, load5, load15) = os.getloadavg()
+        config.read('config.ini')
         threshold = config['clique3cass']['checkLoad']
         return load1 > float(threshold)
 
