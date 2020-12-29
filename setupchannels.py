@@ -66,14 +66,14 @@ insert into channel(peer, port, pq, e) values('172.31.50.102', 12823, '7e6d15d35
 """
 forgesession.execute(stmt)
 
-clique3session.commit()
+clique3conn.commit()
 clique3session.close()
 clique3conn.close()
 
-forgesession.commit()
+forgeconn.commit()
 forgesession.close()
 forgeconn.close()
 
-instance3session.commit()
+instance3conn.commit()
 instance3session.close()
 instance3conn.close()
