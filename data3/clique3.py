@@ -103,8 +103,9 @@ class HandleBase:
     def postTxn(self, txn):
         conn, session, kafkaHost = self.setup()
         try:
-            res = session.execute('select peer, pq, d from clique3.channel \
-where port =12821 limit 1').one()
+            session.execute('select peer, pq, d from channel \
+where port =12821 limit 1')
+            res = session.fetchone()
             if res:
                 [peer, pq, d] = res
                 key = Fernet.generate_key()
@@ -158,7 +159,7 @@ class AliasHandler(HandleBase):
             sha256.update('{0}'.format(alias).encode('utf-8'))
             hashCode = sha256.hexdigest()
             stmt = """
-            insert into clique3.player0(id, clique, global_id, pq, d,
+            insert into player0(id, clique, global_id, pq, d,
             alias, hash_code, setup, repo, step1repo)
             values(%s, '3', %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
             """
@@ -178,7 +179,8 @@ class AliasHandler(HandleBase):
             stmt = """
             select playerrepo, step1repo from runtime where id=0
             """
-            [playerrepo, step1repo] = session.execute(stmt).one()
+            session.execute(stmt)
+            [playerrepo, step1repo] = session.fetchone()
             if not playerrepo or not step1repo:
                 logging.error('nowhere to put the key, exit')
                 return
@@ -250,13 +252,15 @@ class AliasHandler(HandleBase):
                 hashCode = sha256.hexdigest()
                 symbol = hashCode[:5]
                 symbol = symbol.upper()
-                res = session.execute("""
-                select symbol from clique3.issuer0
-                where symbol = %s""", [symbol]).one()
+                session.execute("""
+                select symbol from issuer0
+                where symbol = %s""", [symbol])
+                res = session.fetchone()
                 if res:
                     continue
-                res = session.execute("""select word from clique3.reserved0
-                where word = %s""", [symbol]).one()
+                session.execute("""select word from reserved0
+                where word = %s""", [symbol])
+                res = session.fetchone()
                 if res:
                     continue
                 # end the loop
@@ -306,9 +310,10 @@ class SymbolHandler(HandleBase):
         conn, session, kafkaHost = super().setup()
         try:
             (globalId, symbol) = proposal.split('||')
-            res = session.execute("""
-            select alias from clique3.player0
-            where global_id=%s""", [globalId]).one()
+            session.execute("""
+            select alias from player0
+            where global_id=%s""", [globalId])
+            res = session.fetchone()
             if not res:
                 logging.error('alias can not be None')
                 return
@@ -316,7 +321,8 @@ class SymbolHandler(HandleBase):
             stmt = """
             select playerrepo, step1repo from runtime where id=0
             """
-            [playerrepo, step1repo] = session.execute(stmt).one()
+            session.execute(stmt)
+            [playerrepo, step1repo] = session.fetchone()
             if not playerrepo or not step1repo:
                 logging.error('nowhere to put the key, exit')
                 return
@@ -410,15 +416,17 @@ class IssueHandler(HandleBase):
             prop = prop.strip()
             stmt = """select checksumpq, checksumd from runtime
             where id = 0 limit 1"""
-            (checksumpq, checksumd) = session.execute(stmt).one()
+            session.execute(stmt)
+            [checksumpq, checksumd] = session.fetchone()
             pro1 = Popen(['./crypt', checksumpq, checksumd, prop[-16:]],
                          stdin=None, stdout=PIPE)
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
             logging.debug('checksum0 = {0}'.format(checksum0))
-            [symbol, step1repo] = session.execute("""
-            select symbol, step1repo from clique3.issuer0
-            where pq = %s limit 1""", [pq]).one()
+            session.execute("""
+            select symbol, step1repo from issuer0
+            where pq = %s limit 1""", [pq])
+            [symbol, step1repo] = session.fetchone()
             logging.debug('symbol = {0}, step1repo = {2}, \
 pq = {1}'.format(symbol, pq, step1repo))
             if not symbol:
@@ -443,8 +451,9 @@ pq = {1}'.format(symbol, pq, step1repo))
             target = right[:-2]
             (symbol, noteId, quantity) = left.split('||')
             symbol = symbol[2:]
-            res = session.execute("""select note_id from ownership0
-            where note_id = %s limit 1""", [noteId]).one()
+            session.execute("""select note_id from ownership0
+            where note_id = %s limit 1""", [noteId])
+            res = session.fetchone()
             if res:
                 logging.error("the note {0} is already there".format(noteId))
                 return
@@ -519,15 +528,16 @@ class TransferHandler(HandleBase):
             prop = prop.strip()
             stmt = """select checksumpq, checksumd from runtime
             where id = 0 limit 1"""
-            (checksumpq, checksumd) = session.execute(stmt).one()
+            session.execute(stmt)
+            [checksumpq, checksumd] = session.fetchone()
             pro1 = Popen(['./crypt', checksumpq, checksumd, proposal[-16:]],
                          stdin=None, stdout=PIPE)
             checksum0 = pro1.communicate()[0].decode().strip()
             checksum0 = checksum0.rstrip('0')
-            [alias, step1repo] = session.execute("""
-            select alias, step1repo from clique3.player0 where pq = %s
-            """, [pq]).one()
-            # logging.info('alias={0}, step1repo={1}'.format(alias, step1repo))
+            session.execute("""
+            select alias, step1repo from player0 where pq = %s
+            """, [pq])
+            [alias, step1repo] = session.fetchone()
             if not alias:
                 logging.error('alias for pq {0} can not be None'.format(pq))
                 return
@@ -586,12 +596,14 @@ lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
     def verify(self, pq, symbol, noteId, quantity, lastsig):
         conn, session, kafkaHost = super().setup()
         try:
-            [owner0, verdict0] = session.execute("""
+            session.execute("""
             select owner, verdict0 from ownership0 where note_id = %s
-            """, [noteId]).one()
-            [owner1] = session.execute("""
+            """, [noteId])
+            [owner0, verdict0] = session.fetchone()
+            session.execute("""
             select alias from player0 where pq = %s
-            """, [pq]).one()
+            """, [pq])
+            [owner1] = session.fetchone()
             logging.debug('owner0 = {0}, owner1 = {1}, verdict[-16:] = {2}, \
 lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             if owner0 == owner1 and verdict0 == lastsig:
@@ -643,9 +655,10 @@ class IssueProposalHandler(HandleBase):
         try:
             (symbol, quantity, globalId) = payload.split('||')
             stmt = """
-            select repo from clique3.issuer0 where symbol = %s limit 1
+            select repo from issuer0 where symbol = %s limit 1
             """
-            [repopath] = session.execute(stmt, [symbol]).one()
+            session.execute(stmt, [symbol])
+            [repopath] = session.fetchone()
             # logging.info(repopath)
             if not repopath:
                 logging.eror('binary file for symbol {0} \
@@ -677,15 +690,17 @@ class TransferProposalHandler(HandleBase):
                 return
             alias, rawCode, lastTxn, lastBlock, globalId = payload.split('&&')
             stmt = """
-            select repo from clique3.player0 where global_id = %s
+            select repo from player0 where global_id = %s
             """
-            [binarypath] = session.execute(stmt, [globalId]).one()
+            session.execute(stmt, [globalId])
+            [binarypath] = session.fetchone()
             if not binarypath:
                 logging.error('binarry not found for {0}'.format(globalId))
                 return
-            [binarypath2] = session.execute("""
-            select repo from clique3.player0 where alias = %s
-            """, [alias]).one()
+            session.execute("""
+            select repo from player0 where alias = %s
+            """, [alias])
+            [binarypath2] = session.fetchone()
             if not binarypath2 or binarypath2 != binarypath:
                 logging.info('binary not correct for {0}'.format(alias))
                 return

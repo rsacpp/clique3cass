@@ -43,8 +43,9 @@ class IssueHandler(Handler0):
         conn, session = self.setupRdb()
         kafkaProducer = self.setupKafka()
         try:
-            r0 = session.execute('select pq, d from channel \
-where port = 21822').one()
+            session.execute('select pq, d from channel \
+where port = 21822')
+            r0 = session.fetchone()
             if r0:
                 pq, d = r0.pq, r0.d
             else:
@@ -71,8 +72,9 @@ where port = 21822').one()
             if not quantity0 or quantity0 not in ['8', '2', '1']:
                 logging.info('quantity is not valid: {0}'.format(quantity0))
                 return
-            r0 = session.execute('select symbol from issuer0 \
-where pq = %s', [pq0]).one()
+            session.execute('select symbol from issuer0 \
+where pq = %s', [pq0])
+            r0 = session.fetchone()
             if r0:
                 symbol = r0.symbol
             else:
@@ -85,8 +87,9 @@ where pq = %s', [pq0]).one()
                 sha256.update("{0}".format(quantity0).encode('utf-8'))
                 digest = sha256.hexdigest()
                 noteId = digest[-8:]
-                r0 = session.execute('select * from clique3.ownership0 \
+                session.execute('select * from ownership0 \
 where note_id = %s', [noteId])
+                r0 = session.fetchone()
                 if not r0:
                     break
             logging.debug('noteId = {0}'.format(noteId))
