@@ -9,10 +9,9 @@ import uuid
 import logging
 import random
 import hashlib
+import psycopg2
 from sys import argv
 from multiprocessing import Process
-from cassandra.cluster import Cluster
-from cassandra.policies import DCAwareRoundRobinPolicy
 from kafka import KafkaProducer
 
 
@@ -29,21 +28,19 @@ def freopen(f, mode, stream):
 
 
 class Handler0(socketserver.BaseRequestHandler):
-    def setupCass(self):
-        cluster = Cluster(argv[1].split(','),
-                          protocol_version=4,
-                          load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'))
-        session = cluster.connect('clique3')
-        return session, cluster
+    def setupRdb(self):
+        conn = psycopg2.connect("dbname={0} user={1}".format(argv[1], argv[2]))
+        session = conn.cursor()
+        return conn, session
 
     def setupKafka(self):
-        kafkaProducer = KafkaProducer(bootstrap_servers=argv[2].split(','))
+        kafkaProducer = KafkaProducer(bootstrap_servers=argv[3].split(','))
         return kafkaProducer
 
 
 class IssueHandler(Handler0):
     def handle(self):
-        session, cluster = self.setupCass()
+        conn, session = self.setupRdb()
         kafkaProducer = self.setupKafka()
         try:
             r0 = session.execute('select pq, d from channel \
@@ -118,7 +115,9 @@ where note_id = %s', [noteId])
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
             kafkaProducer.close()
 
 

@@ -11,16 +11,15 @@ import binascii
 import logging
 import socket
 import base64
+import psycopg2
 from multiprocessing import Process
 from subprocess import Popen, PIPE
-from cassandra.cluster import Cluster
-from cassandra.policies import DCAwareRoundRobinPolicy
 from kafka import KafkaProducer, KafkaConsumer
 from cryptography.fernet import Fernet
 
 config = configparser.ConfigParser()
 config.read('config.ini')
-baseDir = config['clique3cass']['senate']
+baseDir = config['clique3']['senate']
 
 
 def handle_exit(signum):
@@ -39,19 +38,18 @@ class HandleBase:
     def setup(self):
         config = configparser.ConfigParser()
         config.read('config.ini')
-        cassHost = config['clique3cass']['cassandraHost']
-        cassKeyspace = config['clique3cass']['cassandraKeyspace']
-        kafkaHost = config['clique3cass']['kafkaHost']
-        cluster = Cluster(cassHost.split(','), protocol_version=4,
-                          load_balancing_policy=DCAwareRoundRobinPolicy(local_dc='datacenter1'))
-        session = cluster.connect(cassKeyspace)
-        return cluster, session, kafkaHost
+        kafkaHost = config['clique3']['kafkaHost']
+        db = config['clique3']['db']
+        user = config['clique3']['user']
+        conn = psycopg2.connect("dbname={0} user={1}".format(db, user))
+        session = conn.cursor()
+        return conn, session, kafkaHost
 
     def queueName(self):
         pass
 
     def process(self):
-        cluster, session, kafkaHost = self.setup()
+        conn, session, kafkaHost = self.setup()
         queueName = self.queueName()
         logging.info('queue Name: {0}'.format(queueName))
         kafka = KafkaConsumer(queueName,
@@ -74,13 +72,14 @@ class HandleBase:
                 values(%s, %s, toTimestamp(now()), %s)
                 """
                 session.execute(stmt, [uuid.uuid4(), queueName, proposal])
+                session.commit()
                 self.processProposal(proposal)
             except Exception as err:
                 logging.error(err)
 
     def save2forge(self, txn):
         try:
-            cluster, session, kafkaHost = self.setup()
+            conn, session, kafkaHost = self.setup()
             (pq, proposal, verdict, e) = txn.split('||')
             if not pq or not proposal or not verdict:
                 return
@@ -97,10 +96,12 @@ class HandleBase:
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def postTxn(self, txn):
-        cluster, session, kafkaHost = self.setup()
+        conn, session, kafkaHost = self.setup()
         try:
             res = session.execute('select peer, pq, d from clique3.channel \
 where port =12821 limit 1').one()
@@ -132,7 +133,9 @@ where port =12821 limit 1').one()
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def processProposal(self, proposal):
         pass
@@ -140,7 +143,7 @@ where port =12821 limit 1').one()
     def checkLoad(self):
         (load1, load5, load15) = os.getloadavg()
         config.read('config.ini')
-        threshold = config['clique3cass']['checkLoad']
+        threshold = config['clique3']['checkLoad']
         return load1 > float(threshold)
 
 
@@ -148,9 +151,9 @@ class AliasHandler(HandleBase):
     def queueName(self):
         return 'alias3'
 
-    def save2cass(self, alias, globalId, pq, repoPath, step1Path):
+    def save2db(self, alias, globalId, pq, repoPath, step1Path):
         try:
-            cluster, session, kafkaHost = super().setup()
+            conn, session, kafkaHost = super().setup()
             sha256 = hashlib.sha256()
             sha256.update('{0}'.format(alias).encode('utf-8'))
             hashCode = sha256.hexdigest()
@@ -164,10 +167,12 @@ class AliasHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def processProposal(self, proposal):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         kafkaproducer = KafkaProducer(bootstrap_servers=kafkaHost.split(','))
         try:
             stmt = """
@@ -236,7 +241,7 @@ class AliasHandler(HandleBase):
             logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
-            self.save2cass(alias, globalId, pqKey, playerbinary, step1binary)
+            self.save2db(alias, globalId, pqKey, playerbinary, step1binary)
             # put a symbol message to kafka
             sha256 = hashlib.sha256()
             while True:
@@ -267,7 +272,9 @@ class AliasHandler(HandleBase):
             logging.error(err)
         finally:
             kafkaproducer.close()
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
             time.sleep(2)
 
 
@@ -275,8 +282,8 @@ class SymbolHandler(HandleBase):
     def queueName(self):
         return 'symbol3'
 
-    def save2cass(self, globalId, pq, alias, symbol, playerPath, step1Path):
-        cluster, session, kafkaHost = super().setup()
+    def save2db(self, globalId, pq, alias, symbol, playerPath, step1Path):
+        conn, session, kafkaHost = super().setup()
         try:
             sha256 = hashlib.sha256()
             sha256.update('{0}'.format(symbol).encode('utf-8'))
@@ -291,10 +298,12 @@ class SymbolHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def processProposal(self, proposal):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             (globalId, symbol) = proposal.split('||')
             res = session.execute("""
@@ -374,13 +383,15 @@ class SymbolHandler(HandleBase):
             logging.debug(args)
             with Popen(args, stdin=PIPE, stdout=None) as p:
                 p.communicate(input=bytes(srcCode, 'utf-8'))
-            # save2cass
-            self.save2cass(globalId, pqKey, alias,
-                           symbol, issuerbinary, step1binary)
+            # save2db
+            self.save2db(globalId, pqKey, alias,
+                         symbol, issuerbinary, step1binary)
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
             time.sleep(2)
 
 
@@ -389,7 +400,7 @@ class IssueHandler(HandleBase):
         return 'issue3'
 
     def processProposal(self, proposal):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             (pq, prop) = proposal.split('@@')
             if not pq or not prop:
@@ -456,11 +467,13 @@ pq = {1}'.format(symbol, pq, step1repo))
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def save2ownershipcatalog(self, pq, verdict, proposal, rawtext,
                               symbol, noteId, quantity, target):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             sha256 = hashlib.sha256()
             sha256.update("{0}{1}".format(noteId.strip(),
@@ -488,7 +501,9 @@ pq = {1}'.format(symbol, pq, step1repo))
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
 
 class TransferHandler(HandleBase):
@@ -497,7 +512,7 @@ class TransferHandler(HandleBase):
 
     def processProposal(self, proposal):
         # logging.info(proposal)
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             (pq, prop) = proposal.split('@@')
             pq = pq.strip()
@@ -564,10 +579,12 @@ lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def verify(self, pq, symbol, noteId, quantity, lastsig):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             [owner0, verdict0] = session.execute("""
             select owner, verdict0 from ownership0 where note_id = %s
@@ -583,12 +600,14 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
     def save2ownershipcatalog(self, pq, verdict, proposal,
                               rawtext, symbol, noteId, quantity,
                               target, lastsig):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             session.execute("""
             update ownership0 set owner= %s , updated = toTimestamp(now()),
@@ -610,7 +629,9 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
 
 class IssueProposalHandler(HandleBase):
@@ -618,7 +639,7 @@ class IssueProposalHandler(HandleBase):
         return 'issue0'
 
     def processProposal(self, payload):
-        cluster, session, kafkaHost = super().setup()
+        conn, session, kafkaHost = super().setup()
         try:
             (symbol, quantity, globalId) = payload.split('||')
             stmt = """
@@ -636,7 +657,9 @@ is None'.format(symbol))
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
 
 class TransferProposalHandler(HandleBase):
@@ -645,7 +668,7 @@ class TransferProposalHandler(HandleBase):
 
     def processProposal(self, payload):
         try:
-            cluster, session, kafkaHost = super().setup()
+            conn, session, kafkaHost = super().setup()
 
             regexp0 = r'\w+&&\w+\|\|\w+\|\|\d-\>\w+&&\w+&&000&&\w+'
             m = re.match(regexp0, payload)
@@ -675,7 +698,9 @@ class TransferProposalHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            cluster.shutdown()
+            session.commit()
+            session.close()
+            conn.close()
 
 
 if __name__ == '__main__':
