@@ -118,7 +118,7 @@ where note_id = %s', [noteId])
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
             kafkaProducer.close()

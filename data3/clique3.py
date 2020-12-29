@@ -72,7 +72,7 @@ class HandleBase:
                 values(%s, %s, toTimestamp(now()), %s)
                 """
                 session.execute(stmt, [uuid.uuid4(), queueName, proposal])
-                session.commit()
+                conn.commit()
                 self.processProposal(proposal)
             except Exception as err:
                 logging.error(err)
@@ -96,7 +96,7 @@ class HandleBase:
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -134,7 +134,7 @@ where port =12821 limit 1')
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -168,7 +168,7 @@ class AliasHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -276,7 +276,7 @@ class AliasHandler(HandleBase):
             logging.error(err)
         finally:
             kafkaproducer.close()
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
             time.sleep(2)
@@ -302,7 +302,7 @@ class SymbolHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -395,7 +395,7 @@ class SymbolHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
             time.sleep(2)
@@ -476,7 +476,7 @@ pq = {1}'.format(symbol, pq, step1repo))
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -510,7 +510,7 @@ pq = {1}'.format(symbol, pq, step1repo))
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -589,7 +589,7 @@ lastsig = {4}".format(pq, symbol, noteId, quantity, lastsig))
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -612,7 +612,7 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -641,7 +641,7 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -670,7 +670,7 @@ is None'.format(symbol))
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
@@ -713,7 +713,7 @@ class TransferProposalHandler(HandleBase):
         except Exception as err:
             logging.error(err)
         finally:
-            session.commit()
+            conn.commit()
             session.close()
             conn.close()
 
