@@ -47,7 +47,7 @@ class IssueHandler(Handler0):
 where port = 21822')
             r0 = session.fetchone()
             if r0:
-                pq, d = r0.pq, r0.d
+                [pq, d] = r0
             else:
                 logging.info('pq/e can not be None')
                 return
@@ -76,7 +76,7 @@ where port = 21822')
 where pq = %s', [pq0])
             r0 = session.fetchone()
             if r0:
-                symbol = r0.symbol
+                [symbol] = r0
             else:
                 logging.info('symbol can not be empty')
                 return
