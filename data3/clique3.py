@@ -78,18 +78,20 @@ class HandleBase:
                 logging.error(err)
 
     def save2forge(self, txn):
+        forgedb = config['clique3']['forgedb']
+        forgeuser = config['clique3']['forgeuser']
         try:
-            conn, session, kafkaHost = self.setup()
+            conn = psycopg2.connect("dbname={0} user={1}".format(forgedb, forgeuser))
+            session = conn.cursor()
             (pq, proposal, verdict, e) = txn.split('||')
             if not pq or not proposal or not verdict:
                 return
             tag = int(time.time()/128)
             stmt = """
-            insert into forge.raw_txns
+            insert into raw_txns
             (seq, tag, pq, proposal, verdict, txn_refer,
             block_refer, ts)
-            values({0}, '{1}', '{2}', '{3}', '{4}', '{5}',
-            '{6}', now())
+            values(%s, %s, %s, %s, %s, %s, %s, now())
             """.format(str(uuid.uuid4()), tag, pq,
                        proposal, verdict, '', '')
             session.execute(stmt)
