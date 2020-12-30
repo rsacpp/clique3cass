@@ -92,13 +92,13 @@ class HandleBase:
             (seq, tag, pq, proposal, verdict, txn_refer,
             block_refer, ts)
             values(%s, %s, %s, %s, %s, %s, %s, now())
-            """.format(str(uuid.uuid4()), tag, pq,
-                       proposal, verdict, '', '')
-            session.execute(stmt)
+            """
+            session.execute(stmt, [str(uuid.uuid4()), tag, pq,
+                                   proposal, verdict, '', ''])
+            conn.commit()
         except Exception as err:
             logging.error(err)
         finally:
-            conn.commit()
             session.close()
             conn.close()
 
