@@ -90,7 +90,7 @@ class HandleBase:
             block_refer, ts)
             values({0}, '{1}', '{2}', '{3}', '{4}', '{5}',
             '{6}', now())
-            """.format(uuid.uuid4(), tag, pq,
+            """.format(str(uuid.uuid4()), tag, pq,
                        proposal, verdict, '', '')
             session.execute(stmt)
         except Exception as err:
@@ -163,7 +163,7 @@ class AliasHandler(HandleBase):
             alias, hash_code, setup, repo, step1repo)
             values(%s, '3', %s, %s, %s, %s, %s, now(), %s, %s)
             """
-            session.execute(stmt, [uuid.uuid4(), globalId, pq, '', alias,
+            session.execute(stmt, [str(uuid.uuid4()), globalId, pq, '', alias,
                                    hashCode, repoPath, step1Path])
         except Exception as err:
             logging.error(err)
@@ -297,7 +297,7 @@ class SymbolHandler(HandleBase):
             symbol, hash_code, setup, repo, step1repo)
             values(%s, '3', %s, %s, %s, %s, %s, %s, now(), %s, %s)
             """
-            session.execute(stmt, [uuid.uuid4(), globalId, pq, '', alias,
+            session.execute(stmt, [str(uuid.uuid4()), globalId, pq, '', alias,
                                    symbol, hashCode, playerPath, step1Path])
         except Exception as err:
             logging.error(err)
@@ -502,7 +502,7 @@ pq = {1}'.format(symbol, pq, step1repo))
             proposal, note, recipient, hook, stmt, setup, hash_code)
             values(%s, %s, '3',
             %s, %s, %s, %s, %s, '', %s, now(), %s)
-            """, [uuid.uuid4(), int(time.time()),
+            """, [str(uuid.uuid4()), int(time.time()),
                   pq.strip(), verdict.strip(), proposal.strip(),
                   "{0}||{1}||{2}".format(symbol.strip(),
                                          noteId.strip(), quantity.strip()),
@@ -633,7 +633,7 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
             values(%s, %s, '3',
             %s, %s, %s, %s, %s, %s,%s, now(), %s)
-            """, [uuid.uuid4(), int(time.time()), pq, verdict, proposal,
+            """, [str(uuid.uuid4()), int(time.time()), pq, verdict, proposal,
                   "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(),
                                          quantity),
                   target, lastsig, rawtext, hashcode])
