@@ -69,9 +69,9 @@ class HandleBase:
                 proposal = str(m.value, 'utf-8')
                 stmt = """
                 insert into executions(id, code, ts, payload)
-                values(%s, %s, toTimestamp(now()), %s)
+                values(%s, %s, now(), %s)
                 """
-                session.execute(stmt, [uuid.uuid4(), queueName, proposal])
+                session.execute(stmt, [str(uuid.uuid4()), queueName, proposal])
                 conn.commit()
                 self.processProposal(proposal)
             except Exception as err:
@@ -89,7 +89,7 @@ class HandleBase:
             (seq, tag, pq, proposal, verdict, txn_refer,
             block_refer, ts)
             values({0}, '{1}', '{2}', '{3}', '{4}', '{5}',
-            '{6}', toTimestamp(now()))
+            '{6}', now())
             """.format(uuid.uuid4(), tag, pq,
                        proposal, verdict, '', '')
             session.execute(stmt)
@@ -161,7 +161,7 @@ class AliasHandler(HandleBase):
             stmt = """
             insert into player0(id, clique, global_id, pq, d,
             alias, hash_code, setup, repo, step1repo)
-            values(%s, '3', %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
+            values(%s, '3', %s, %s, %s, %s, %s, now(), %s, %s)
             """
             session.execute(stmt, [uuid.uuid4(), globalId, pq, '', alias,
                                    hashCode, repoPath, step1Path])
@@ -295,7 +295,7 @@ class SymbolHandler(HandleBase):
             stmt = """
             insert into issuer0(id, clique, global_id, pq, d, alias,
             symbol, hash_code, setup, repo, step1repo)
-            values(%s, '3', %s, %s, %s, %s, %s, %s, toTimestamp(now()), %s, %s)
+            values(%s, '3', %s, %s, %s, %s, %s, %s, now(), %s, %s)
             """
             session.execute(stmt, [uuid.uuid4(), globalId, pq, '', alias,
                                    symbol, hashCode, playerPath, step1Path])
@@ -492,7 +492,7 @@ pq = {1}'.format(symbol, pq, step1repo))
             session.execute("""
             insert into ownership0(seq, clique, symbol, note_id, quantity,
             owner, updated, hash_code, verdict0)values(%s, '3', %s, %s, %s, %s,
-            toTimestamp(now()), %s, %s)
+            now(), %s, %s)
             """, [int(time.time()), symbol.strip(), noteId.strip(),
                   int(quantity.strip()), target.strip(),
                   hashcode.strip(), verdict[-16:]])
@@ -501,7 +501,7 @@ pq = {1}'.format(symbol, pq, step1repo))
             insert into note_catalog0(id, seq, clique, pq, verdict,
             proposal, note, recipient, hook, stmt, setup, hash_code)
             values(%s, %s, '3',
-            %s, %s, %s, %s, %s, '', %s, toTimestamp(now()), %s)
+            %s, %s, %s, %s, %s, '', %s, now(), %s)
             """, [uuid.uuid4(), int(time.time()),
                   pq.strip(), verdict.strip(), proposal.strip(),
                   "{0}||{1}||{2}".format(symbol.strip(),
@@ -622,7 +622,7 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
         conn, session, kafkaHost = super().setup()
         try:
             session.execute("""
-            update ownership0 set owner= %s , updated = toTimestamp(now()),
+            update ownership0 set owner= %s , updated = now(),
             verdict0 = %s where note_id = %s""",
                             [target, verdict[-16:], noteId])
             sha256 = hashlib.sha256()
@@ -632,7 +632,7 @@ lastsig = {3}'.format(owner0, owner1, verdict0, lastsig))
             session.execute("""insert into note_catalog0(id,seq,clique, pq,
             verdict, proposal, note, recipient, hook, stmt, setup, hash_code)
             values(%s, %s, '3',
-            %s, %s, %s, %s, %s, %s,%s, toTimestamp(now()), %s)
+            %s, %s, %s, %s, %s, %s,%s, now(), %s)
             """, [uuid.uuid4(), int(time.time()), pq, verdict, proposal,
                   "{0}||{1}||{2}".format(symbol.strip(), noteId.strip(),
                                          quantity),
