@@ -192,14 +192,7 @@ class AliasHandler(HandleBase):
             step1folder = '{0}/{1}'.format(step1repo, randomfolder2)
 
             (alias, globalId) = proposal.split('||')
-            if globalId == 'Google102228491863774850583':
-                alias = 'USD'
-            if globalId == 'Google115136090671469415385':
-                alias = 'USD10'
-            if globalId == 'Google100623918396239518004':
-                alias = 'USD100'
-            if globalId == 'Google102652840927564616537':
-                alias = 'USD1000'
+
             args = '{0} genrsa {1}'.format(baseDir, 2048).split(' ')
             output0 = ''
             with Popen(args, stdout=PIPE) as p:
@@ -273,10 +266,14 @@ class AliasHandler(HandleBase):
                     continue
                 # end the loop
                 break
-            if globalId == 'Google115136090671469415385':
-                symbol = 'USD'
             if globalId == 'Google102228491863774850583':
-                symbol = 'Federal2020President'
+                symbol = 'USD'
+            if globalId == 'Google115136090671469415385':
+                symbol = 'USD10'
+            if globalId == 'Google100623918396239518004':
+                symbol = 'USD100'
+            if globalId == 'Google102652840927564616537':
+                symbol = 'USD1000'
             kafkamsg = bytes('{0}||{1}'.format(globalId, symbol), 'utf-8')
             kafkaproducer.send('symbol3', key=kafkamsg, value=kafkamsg)
             kafkaproducer.flush()
