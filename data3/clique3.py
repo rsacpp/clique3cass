@@ -193,7 +193,13 @@ class AliasHandler(HandleBase):
 
             (alias, globalId) = proposal.split('||')
             if globalId == 'Google102228491863774850583':
-                alias = 'electioncommitte'
+                alias = 'USD'
+            if globalId == 'Google115136090671469415385':
+                alias = 'USD10'
+            if globalId == 'Google100623918396239518004':
+                alias = 'USD100'
+            if globalId == 'Google102652840927564616537':
+                alias = 'USD1000'
             args = '{0} genrsa {1}'.format(baseDir, 2048).split(' ')
             output0 = ''
             with Popen(args, stdout=PIPE) as p:
