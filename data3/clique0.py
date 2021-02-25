@@ -69,7 +69,7 @@ where port = 21822')
             if not pq0:
                 logging.info('pq0 can not be empty')
                 return
-            if not quantity0 or quantity0 not in list(range(1,10)):
+            if not quantity0 or int(quantity0) not in list(range(1,10)):
                 logging.info('quantity is not valid: {0}'.format(quantity0))
                 return
             session.execute('select symbol from issuer0 \
