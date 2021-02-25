@@ -62,9 +62,21 @@ main(int argc, char* argv[]){
       string quantity = string(argv[2]);
       string v1 = string("1");
       string v2 = string("2");
+      string v3 = string("3");
+      string v4 = string("4");
+      string v5 = string("5");
+      string v6 = string("6");
+      string v7 = string("7");
       string v8 = string("8");
+      string v9 = string("9");
       if(quantity.compare(v1) !=0 &&
 	 quantity.compare(v2) !=0 &&
+	 quantity.compare(v3) !=0 &&
+	 quantity.compare(v4) !=0 &&
+	 quantity.compare(v5) !=0 &&
+	 quantity.compare(v6) !=0 &&
+	 quantity.compare(v7) !=0 &&
+	 quantity.compare(v9) !=0 &&
 	 quantity.compare(v8) !=0 ){
 	std::cout<<"quantity should be 1,2 or 8"<<std::endl;
 	return 0;
